@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.5...v1.0.6) (2026-02-15)
+
+
+### Bug Fixes
+
+* update zod peer dependency to v4 for compatibility ([0b8c107](https://github.com/izzzzzi/opencode-hashline/commit/0b8c107d7aabdf8e5fc4ab9c272589433ebff380))
+
 ## [1.0.5](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.4...v1.0.5) (2026-02-15)
 
 
