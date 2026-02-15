@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.4...v1.0.5) (2026-02-15)
+
+
+### Bug Fixes
+
+* disable debug logging by default, add debug config flag ([ea65b6d](https://github.com/izzzzzi/opencode-hashline/commit/ea65b6d119e128932eff8adf8680086e86173179))
+
 ## [1.0.4](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.3...v1.0.4) (2026-02-15)
 
 
