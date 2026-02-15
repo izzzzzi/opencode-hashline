@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.3...v1.0.4) (2026-02-15)
+
+
+### Bug Fixes
+
+* strip hashline prefixes from patch-formatted lines ([ce5c553](https://github.com/izzzzzi/opencode-hashline/commit/ce5c553b72563901304b336e95f678adbcbb0bbe))
+
 ## [1.0.3](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.2...v1.0.3) (2026-02-15)
 
 
