@@ -5,8 +5,12 @@
 **Content-addressable line hashing for precise AI code editing**
 
 [![CI](https://github.com/izzzzzi/opencode-hashline/actions/workflows/ci.yml/badge.svg)](https://github.com/izzzzzi/opencode-hashline/actions/workflows/ci.yml)
+[![Release](https://github.com/izzzzzi/opencode-hashline/actions/workflows/release.yml/badge.svg)](https://github.com/izzzzzi/opencode-hashline/actions/workflows/release.yml)
 [![npm version](https://img.shields.io/npm/v/opencode-hashline.svg?style=flat&colorA=18181B&colorB=28CF8D)](https://www.npmjs.com/package/opencode-hashline)
+[![npm downloads](https://img.shields.io/npm/dm/opencode-hashline.svg?style=flat&colorA=18181B&colorB=28CF8D)](https://www.npmjs.com/package/opencode-hashline)
+[![GitHub release](https://img.shields.io/github/v/release/izzzzzi/opencode-hashline?style=flat&colorA=18181B&colorB=28CF8D)](https://github.com/izzzzzi/opencode-hashline/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat&colorA=18181B&colorB=28CF8D)](LICENSE)
+[![semantic-release](https://img.shields.io/badge/semantic--release-auto-e10079?style=flat&colorA=18181B)](https://github.com/semantic-release/semantic-release)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&colorA=18181B&colorB=3178C6)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-ESM-green?style=flat&colorA=18181B&colorB=339933)](https://nodejs.org/)
 
