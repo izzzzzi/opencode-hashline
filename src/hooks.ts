@@ -42,7 +42,15 @@ function createBoundedSet(maxSize: number): Set<string> {
   return set;
 }
 
+let debugEnabled = false;
+
+/** Enable or disable debug logging */
+export function setDebug(enabled: boolean) {
+  debugEnabled = enabled;
+}
+
 function debug(...args: unknown[]) {
+  if (!debugEnabled) return;
   const line = `[${new Date().toISOString()}] ${args.map(a => typeof a === "string" ? a : JSON.stringify(a)).join(" ")}\n`;
   try { appendFileSync(DEBUG_LOG, line); } catch {}
 }

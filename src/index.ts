@@ -19,6 +19,7 @@ import {
   createFileReadAfterHook,
   createFileEditBeforeHook,
   createSystemPromptHook,
+  setDebug,
 } from "./hooks";
 import { HashlineCache, resolveConfig, type HashlineConfig } from "./hashline";
 import { createHashlineEditTool } from "./hashline-tool";
@@ -94,9 +95,13 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
     const config = resolveConfig(fileConfig);
     const cache = new HashlineCache(config.cacheSize);
 
+    // Enable debug logging only if config.debug is true
+    setDebug(config.debug);
     const { appendFileSync: writeLog } = await import("fs");
     const debugLog = join(homedir(), ".config", "opencode", "hashline-debug.log");
-    try { writeLog(debugLog, `[${new Date().toISOString()}] plugin loaded, prefix: ${JSON.stringify(config.prefix)}, maxFileSize: ${config.maxFileSize}, projectDir: ${projectDir}\n`); } catch {}
+    if (config.debug) {
+      try { writeLog(debugLog, `[${new Date().toISOString()}] plugin loaded, prefix: ${JSON.stringify(config.prefix)}, maxFileSize: ${config.maxFileSize}, projectDir: ${projectDir}\n`); } catch {}
+    }
 
     // Track temp files for cleanup
     const tempFiles = new Set<string>();
@@ -165,7 +170,7 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
               writeFileSync(tmpPath, cached, "utf-8");
               tempFiles.add(tmpPath);
               p.url = `file://${tmpPath}`;
-              writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated (cached): ${filePath}\n`);
+              if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated (cached): ${filePath}\n`); } catch {} }
               continue;
             }
 
@@ -178,10 +183,10 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
             writeFileSync(tmpPath, annotated, "utf-8");
             p.url = `file://${tmpPath}`;
 
-            writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated: ${filePath} lines=${content.split("\n").length}\n`);
+            if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated: ${filePath} lines=${content.split("\n").length}\n`); } catch {} }
           }
         } catch (e) {
-          try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message error: ${e}\n`); } catch {}
+          if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message error: ${e}\n`); } catch {} }
         }
       },
     };

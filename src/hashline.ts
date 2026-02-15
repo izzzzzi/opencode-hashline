@@ -36,6 +36,8 @@ export interface HashlineConfig {
    * Set to `false` to disable prefix (legacy format: `1:a3f|code here`).
    */
   prefix?: string | false;
+  /** Enable debug logging to ~/.config/opencode/hashline-debug.log (default: false) */
+  debug?: boolean;
 }
 
 /** Default exclude patterns */
@@ -80,6 +82,7 @@ export const DEFAULT_CONFIG: Required<HashlineConfig> = {
   hashLength: 0, // 0 = adaptive
   cacheSize: 100,
   prefix: DEFAULT_PREFIX,
+  debug: false,
 };
 
 /**
@@ -108,6 +111,7 @@ export function resolveConfig(
     hashLength: merged.hashLength ?? DEFAULT_CONFIG.hashLength,
     cacheSize: merged.cacheSize ?? DEFAULT_CONFIG.cacheSize,
     prefix: merged.prefix !== undefined ? merged.prefix : DEFAULT_CONFIG.prefix,
+    debug: merged.debug ?? DEFAULT_CONFIG.debug,
   };
 }
 
