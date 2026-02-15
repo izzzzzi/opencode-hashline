@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.1...v1.0.2) (2026-02-15)
+
+
+### Bug Fixes
+
+* add callID deduplication for batch tool support ([1fa7dc9](https://github.com/izzzzzi/opencode-hashline/commit/1fa7dc90e9f8bb86fb6a63d13c18165638a7ad61))
+
 # 1.0.0 (2026-02-15)
 
 
