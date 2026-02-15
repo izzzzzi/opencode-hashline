@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, realpathSync, writeFileSync } from "fs";
 import { isAbsolute, relative, resolve, sep } from "path";
 import { z } from "zod";
 import type { ToolContext } from "@opencode-ai/plugin";
@@ -43,16 +43,24 @@ export function createHashlineEditTool(
         replacement?: string;
       };
       const absPath = isAbsolute(path) ? path : resolve(context.directory, path);
-      const normalizedAbs = resolve(absPath);
-      const normalizedWorktree = resolve(context.worktree);
-      if (normalizedAbs !== normalizedWorktree && !normalizedAbs.startsWith(normalizedWorktree + sep)) {
+      // Use realpathSync to resolve symlinks — prevents symlink-based traversal
+      let realAbs: string;
+      try {
+        realAbs = realpathSync(absPath);
+      } catch {
+        // File doesn't exist yet (new file) — fall back to resolve()
+        realAbs = resolve(absPath);
+      }
+      const realWorktree = realpathSync(resolve(context.worktree));
+      if (realAbs !== realWorktree && !realAbs.startsWith(realWorktree + sep)) {
         throw new Error(`Access denied: "${path}" resolves outside the project directory`);
       }
+      const normalizedAbs = resolve(absPath);
       const displayPath = relative(context.worktree, absPath) || path;
 
       let current: string;
       try {
-        current = readFileSync(absPath, "utf-8");
+        current = readFileSync(realAbs, "utf-8");
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to read "${displayPath}": ${reason}`);
@@ -81,7 +89,7 @@ export function createHashlineEditTool(
       }
 
       try {
-        writeFileSync(absPath, nextContent, "utf-8");
+        writeFileSync(realAbs, nextContent, "utf-8");
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to write "${displayPath}": ${reason}`);
@@ -89,8 +97,9 @@ export function createHashlineEditTool(
 
       if (cache) {
         // Invalidate all possible path variants the file could be cached under
-        cache.invalidate(absPath);
+        cache.invalidate(realAbs);
         cache.invalidate(normalizedAbs);
+        cache.invalidate(absPath);
         if (path !== absPath) cache.invalidate(path);
         if (displayPath !== absPath) cache.invalidate(displayPath);
       }

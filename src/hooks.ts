@@ -24,6 +24,24 @@ import {
 
 const DEBUG_LOG = join(homedir(), ".config", "opencode", "hashline-debug.log");
 
+/** Max number of callIDs to track for deduplication before evicting old entries */
+const MAX_PROCESSED_IDS = 10_000;
+
+/** Bounded Set that evicts oldest entries when capacity is reached */
+function createBoundedSet(maxSize: number): Set<string> {
+  const set = new Set<string>();
+  const originalAdd = set.add.bind(set);
+  set.add = (value: string) => {
+    if (set.size >= maxSize) {
+      // Delete the oldest entry (first inserted)
+      const first = set.values().next().value;
+      if (first !== undefined) set.delete(first);
+    }
+    return originalAdd(value);
+  };
+  return set;
+}
+
 function debug(...args: unknown[]) {
   const line = `[${new Date().toISOString()}] ${args.map(a => typeof a === "string" ? a : JSON.stringify(a)).join(" ")}\n`;
   try { appendFileSync(DEBUG_LOG, line); } catch {}
@@ -103,7 +121,7 @@ export function createFileReadAfterHook(
 
   // Deduplicate by callID — batch tool may fire the hook multiple times
   // for the same child operation (see opencode-wakatime for reference)
-  const processedCallIds = new Set<string>();
+  const processedCallIds = createBoundedSet(MAX_PROCESSED_IDS);
 
   return async (input, output) => {
     debug("tool.execute.after:", input.tool, "args:", input.args);
@@ -182,7 +200,7 @@ export function createFileEditBeforeHook(
   const prefix = resolved.prefix;
 
   // Deduplicate by callID — batch tool may fire the hook multiple times
-  const processedCallIds = new Set<string>();
+  const processedCallIds = createBoundedSet(MAX_PROCESSED_IDS);
 
   return async (input, output) => {
     // Deduplicate: skip if this callID was already processed
@@ -204,7 +222,7 @@ export function createFileEditBeforeHook(
     if (!output.args || typeof output.args !== "object") return;
 
     // Strip hashes from common content fields
-    const contentFields = [
+    const contentFields = new Set([
       "content",
       "new_content",
       "old_content",
@@ -215,13 +233,28 @@ export function createFileEditBeforeHook(
       "diff",
       "patch",
       "patchText",
-    ];
+      "body",
+    ]);
 
-    for (const field of contentFields) {
-      if (typeof output.args[field] === "string") {
-        output.args[field] = stripHashes(output.args[field], prefix);
+    // Recursively strip hashes from nested objects/arrays (batch/multiedit support)
+    function stripDeep(obj: Record<string, unknown>): void {
+      for (const key of Object.keys(obj)) {
+        const val = obj[key];
+        if (typeof val === "string" && contentFields.has(key)) {
+          obj[key] = stripHashes(val, prefix);
+        } else if (Array.isArray(val)) {
+          for (const item of val) {
+            if (item && typeof item === "object" && !Array.isArray(item)) {
+              stripDeep(item as Record<string, unknown>);
+            }
+          }
+        } else if (val && typeof val === "object" && !Array.isArray(val)) {
+          stripDeep(val as Record<string, unknown>);
+        }
       }
     }
+
+    stripDeep(output.args as Record<string, unknown>);
   };
 }
 

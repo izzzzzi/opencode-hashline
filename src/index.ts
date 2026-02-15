@@ -10,8 +10,8 @@
  * constants, import from "opencode-hashline/utils".
  */
 
-import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { readFileSync, realpathSync, unlinkSync, writeFileSync } from "fs";
+import { join, resolve, sep } from "path";
 import { homedir, tmpdir } from "os";
 import { fileURLToPath } from "url";
 import type { Plugin } from "@opencode-ai/plugin";
@@ -89,6 +89,7 @@ function loadConfig(
 export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
   return async (input) => {
     const projectDir = (input as Record<string, unknown>).directory as string | undefined;
+    const worktree = (input as Record<string, unknown>).worktree as string | undefined;
     const fileConfig = loadConfig(projectDir, userConfig);
     const config = resolveConfig(fileConfig);
     const cache = new HashlineCache(config.cacheSize);
@@ -96,6 +97,16 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
     const { appendFileSync: writeLog } = await import("fs");
     const debugLog = join(homedir(), ".config", "opencode", "hashline-debug.log");
     try { writeLog(debugLog, `[${new Date().toISOString()}] plugin loaded, prefix: ${JSON.stringify(config.prefix)}, maxFileSize: ${config.maxFileSize}, projectDir: ${projectDir}\n`); } catch {}
+
+    // Track temp files for cleanup
+    const tempFiles = new Set<string>();
+    const cleanupTempFiles = () => {
+      for (const f of tempFiles) {
+        try { unlinkSync(f); } catch {}
+      }
+      tempFiles.clear();
+    };
+    process.on("exit", cleanupTempFiles);
 
     return {
       tool: {
@@ -122,6 +133,19 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
             }
             if (!filePath) continue;
 
+            // Worktree boundary check — only process files within the project
+            if (worktree) {
+              try {
+                const realFile = realpathSync(filePath);
+                const realWorktree = realpathSync(resolve(worktree));
+                if (realFile !== realWorktree && !realFile.startsWith(realWorktree + sep)) {
+                  continue;
+                }
+              } catch {
+                continue;
+              }
+            }
+
             // Check exclusions
             if (shouldExclude(filePath, config.exclude)) continue;
 
@@ -139,6 +163,7 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
               // Write annotated content to temp file and swap URL
               const tmpPath = join(tmpdir(), `hashline-${p.id}.txt`);
               writeFileSync(tmpPath, cached, "utf-8");
+              tempFiles.add(tmpPath);
               p.url = `file://${tmpPath}`;
               writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated (cached): ${filePath}\n`);
               continue;
