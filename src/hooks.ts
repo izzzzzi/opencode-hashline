@@ -31,7 +31,7 @@ function debug(...args: unknown[]) {
 
 /** Tool names used by OpenCode for file operations */
 const FILE_READ_TOOLS = ["read", "file_read", "read_file", "cat", "view"];
-const FILE_EDIT_TOOLS = ["write", "file_write", "file_edit", "edit", "edit_file", "patch", "apply_patch", "multiedit"];
+const FILE_EDIT_TOOLS = ["write", "file_write", "file_edit", "edit", "edit_file", "patch", "apply_patch", "multiedit", "batch"];
 
 /**
  * Check if a tool input looks like a file-reading tool.
@@ -101,8 +101,21 @@ export function createFileReadAfterHook(
   const hashLen = resolved.hashLength || 0;
   const prefix = resolved.prefix;
 
+  // Deduplicate by callID — batch tool may fire the hook multiple times
+  // for the same child operation (see opencode-wakatime for reference)
+  const processedCallIds = new Set<string>();
+
   return async (input, output) => {
     debug("tool.execute.after:", input.tool, "args:", input.args);
+
+    // Deduplicate: skip if this callID was already processed
+    if (input.callID) {
+      if (processedCallIds.has(input.callID)) {
+        debug("skipped: duplicate callID", input.callID);
+        return;
+      }
+      processedCallIds.add(input.callID);
+    }
 
     // Only process file-read tools (fix #5: filter by tool name)
     if (!isFileReadTool(input.tool, input.args as Record<string, unknown> | undefined)) {
@@ -168,7 +181,18 @@ export function createFileEditBeforeHook(
   const resolved = config ?? resolveConfig();
   const prefix = resolved.prefix;
 
+  // Deduplicate by callID — batch tool may fire the hook multiple times
+  const processedCallIds = new Set<string>();
+
   return async (input, output) => {
+    // Deduplicate: skip if this callID was already processed
+    if (input.callID) {
+      if (processedCallIds.has(input.callID)) {
+        return;
+      }
+      processedCallIds.add(input.callID);
+    }
+
     const toolName = input.tool.toLowerCase();
 
     // Only process file-edit tools
