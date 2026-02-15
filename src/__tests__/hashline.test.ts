@@ -272,6 +272,30 @@ describe("stripHashes", () => {
     const stripped = stripHashes(formatted, ">> ");
     expect(stripped).toBe(original);
   });
+
+  it("strips hashes from patch-formatted lines with +/-/space markers", () => {
+    const patchContent = [
+      "+#HL 1:abc|const x = 1;",
+      "-#HL 2:def|const y = 2;",
+      " #HL 3:012|const z = 3;",
+      "+plain line without hash",
+      "*** End Patch",
+    ].join("\n");
+    const stripped = stripHashes(patchContent);
+    expect(stripped).toBe([
+      "+const x = 1;",
+      "-const y = 2;",
+      " const z = 3;",
+      "+plain line without hash",
+      "*** End Patch",
+    ].join("\n"));
+  });
+
+  it("preserves patch markers when stripping hashes with custom prefix", () => {
+    const patchContent = "+>> 5:a3f|some code\n->> 6:b4e|old code";
+    const stripped = stripHashes(patchContent, ">> ");
+    expect(stripped).toBe("+some code\n-old code");
+  });
 });
 
 // ---------------------------------------------------------------------------

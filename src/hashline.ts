@@ -246,7 +246,8 @@ export function stripHashes(content: string, prefix?: string | false): string {
   // Use cached regex
   let hashLinePattern = stripRegexCache.get(escapedPrefix);
   if (!hashLinePattern) {
-    hashLinePattern = new RegExp(`^${escapedPrefix}\\d+:[0-9a-f]{2,8}\\|`);
+    // Match hash prefix, optionally preceded by patch markers (+, -, space)
+    hashLinePattern = new RegExp(`^([+ \\-])?${escapedPrefix}\\d+:[0-9a-f]{2,8}\\|`);
     stripRegexCache.set(escapedPrefix, hashLinePattern);
   }
 
@@ -255,7 +256,9 @@ export function stripHashes(content: string, prefix?: string | false): string {
     .map((line) => {
       const match = line.match(hashLinePattern!);
       if (match) {
-        return line.slice(match[0].length);
+        // Preserve the patch marker (+/-/space) if present
+        const patchMarker = match[1] || "";
+        return patchMarker + line.slice(match[0].length);
       }
       return line;
     })
