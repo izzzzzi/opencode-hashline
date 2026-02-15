@@ -1,6 +1,6 @@
 {
   "name": "opencode-hashline",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hashline plugin for OpenCode — content-addressable line hashing for precise AI code editing",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -40,7 +40,8 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@opencode-ai/plugin": "^1.2.2"
+    "@opencode-ai/plugin": "^1.2.2",
+    "zod": "^3.0.0"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.2.2",
@@ -48,9 +49,24 @@
     "@types/picomatch": "^4.0.2",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "zod": "^4.1.8"
   },
   "dependencies": {
     "picomatch": "^4.0.3"
+  },
+  "release": {
+    "branches": ["main"],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      ["@semantic-release/git", {
+        "assets": ["package.json", "CHANGELOG.md"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }]
+    ]
   }
 }

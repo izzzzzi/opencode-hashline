@@ -7,5 +7,5 @@ export default defineConfig({
   clean: true,
   target: "esnext",
   outDir: "dist",
-  external: ["@opencode-ai/plugin", "@opencode-ai/sdk"],
+  external: ["@opencode-ai/plugin", "@opencode-ai/sdk", "zod"],
 });
