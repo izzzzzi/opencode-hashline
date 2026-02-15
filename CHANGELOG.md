@@ -1,3 +1,11 @@
+# 1.0.0 (2026-02-15)
+
+
+### Bug Fixes
+
+* add semantic-release plugins to devDependencies ([563785e](https://github.com/izzzzzi/opencode-hashline/commit/563785efd906356f704edec6e692e3b3dd723dd5))
+* replace @opencode-ai/plugin/tool with direct zod import for CJS compatibility ([e17a620](https://github.com/izzzzzi/opencode-hashline/commit/e17a620c97f64b547417d8725a138345086a05d7))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
