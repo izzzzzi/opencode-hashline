@@ -1,0 +1,56 @@
+{
+  "name": "opencode-hashline",
+  "version": "1.0.0",
+  "description": "Hashline plugin for OpenCode — content-addressable line hashing for precise AI code editing",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "import": "./dist/utils.js",
+      "require": "./dist/utils.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "benchmark": "npx tsx benchmarks/benchmark.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "plugin",
+    "hashline",
+    "line-hashing",
+    "ai",
+    "code-editing"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.2.2"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.2.2",
+    "@types/node": "^25.2.3",
+    "@types/picomatch": "^4.0.2",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.3"
+  }
+}

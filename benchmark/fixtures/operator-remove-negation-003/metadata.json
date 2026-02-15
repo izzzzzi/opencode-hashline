@@ -1,0 +1,19 @@
+{
+  "mutation_type": "remove-negation",
+  "mutation_category": "operator",
+  "difficulty": "hard",
+  "difficulty_score": 9,
+  "line_number": 258,
+  "original_snippet": "!",
+  "mutated_snippet": "",
+  "file_path": "packages/react-server-dom-unbundled/src/ReactFlightUnbundledReferences.js",
+  "context": {
+    "file_lines": 361,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 11,
+    "density": 0.729,
+    "line_indent": 6,
+    "containing_function": "getReference"
+  }
+}

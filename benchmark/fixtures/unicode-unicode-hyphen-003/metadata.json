@@ -1,0 +1,19 @@
+{
+  "mutation_type": "unicode-hyphen",
+  "mutation_category": "unicode",
+  "difficulty": "hard",
+  "difficulty_score": 6,
+  "line_number": 347,
+  "original_snippet": "-",
+  "mutated_snippet": "–",
+  "file_path": "packages/shared/ReactTypes.js",
+  "context": {
+    "file_lines": 390,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 3,
+    "density": 0.818,
+    "line_indent": 2,
+    "containing_function": null
+  }
+}

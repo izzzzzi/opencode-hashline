@@ -1,0 +1,19 @@
+{
+  "mutation_type": "remove-early-return",
+  "mutation_category": "structural",
+  "difficulty": "hard",
+  "difficulty_score": 11,
+  "line_number": 200,
+  "original_snippet": "if (!enableDefaultTransitionIndicator) {\nreturn;\n}",
+  "mutated_snippet": "[removed]",
+  "file_path": "packages/react-reconciler/src/ReactFiberAsyncAction.js",
+  "context": {
+    "file_lines": 264,
+    "is_repeated_line": true,
+    "repeat_count": 3,
+    "similar_block_count": 14,
+    "density": 0.801,
+    "line_indent": 2,
+    "containing_function": "registerDefaultIndicator"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "mutation_type": "remove-negation",
+  "mutation_category": "operator",
+  "difficulty": "medium",
+  "difficulty_score": 5,
+  "line_number": 117,
+  "original_snippet": "!",
+  "mutated_snippet": "",
+  "file_path": "packages/react-devtools-timeline/src/content-views/NativeEventsView.js",
+  "context": {
+    "file_lines": 260,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 0,
+    "density": 0.753,
+    "line_indent": 4,
+    "containing_function": null
+  }
+}

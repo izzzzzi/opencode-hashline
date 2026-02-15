@@ -1,0 +1,19 @@
+{
+  "mutation_type": "swap-call-args",
+  "mutation_category": "call",
+  "difficulty": "hard",
+  "difficulty_score": 10,
+  "line_number": 264,
+  "original_snippet": "warn(action, 'This is effectively a no-op')",
+  "mutated_snippet": "warn('This is effectively a no-op', action)",
+  "file_path": "packages/react-native-renderer/src/legacy-events/SyntheticEvent.js",
+  "context": {
+    "file_lines": 348,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 11,
+    "density": 0.77,
+    "line_indent": 4,
+    "containing_function": "getPooledWarningPropertyDefinition"
+  }
+}

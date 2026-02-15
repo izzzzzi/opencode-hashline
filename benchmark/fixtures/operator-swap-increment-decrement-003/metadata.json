@@ -1,0 +1,19 @@
+{
+  "mutation_type": "swap-increment-decrement",
+  "mutation_category": "operator",
+  "difficulty": "hard",
+  "difficulty_score": 11,
+  "line_number": 385,
+  "original_snippet": "++",
+  "mutated_snippet": "--",
+  "file_path": "packages/react-devtools-shared/src/hooks/parseHookNames/loadSourceAndMetadata.js",
+  "context": {
+    "file_lines": 508,
+    "is_repeated_line": true,
+    "repeat_count": 2,
+    "similar_block_count": 11,
+    "density": 0.733,
+    "line_indent": 2,
+    "containing_function": "flattenHooksListImpl"
+  }
+}

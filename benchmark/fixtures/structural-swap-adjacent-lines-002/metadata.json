@@ -1,0 +1,19 @@
+{
+  "mutation_type": "swap-adjacent-lines",
+  "mutation_category": "structural",
+  "difficulty": "medium",
+  "difficulty_score": 4,
+  "line_number": 45,
+  "original_snippet": "[lines 45-46]",
+  "mutated_snippet": "[swapped]",
+  "file_path": "packages/react-noop-renderer/src/ReactNoopFlightServer.js",
+  "context": {
+    "file_lines": 114,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 2,
+    "density": 0.828,
+    "line_indent": 2,
+    "containing_function": null
+  }
+}

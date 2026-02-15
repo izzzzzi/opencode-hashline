@@ -1,0 +1,19 @@
+{
+  "mutation_type": "identifier-multi-edit",
+  "mutation_category": "identifier",
+  "difficulty": "easy",
+  "difficulty_score": 6,
+  "line_number": 96,
+  "original_snippet": "id",
+  "mutated_snippet": "di",
+  "file_path": "packages/react-devtools-shared/src/devtools/views/TabBar.js",
+  "context": {
+    "file_lines": 141,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 1,
+    "density": 0.691,
+    "line_indent": 8,
+    "containing_function": "TabBar"
+  }
+}

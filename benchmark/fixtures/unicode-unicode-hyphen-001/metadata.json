@@ -1,0 +1,19 @@
+{
+  "mutation_type": "unicode-hyphen",
+  "mutation_category": "unicode",
+  "difficulty": "easy",
+  "difficulty_score": 1,
+  "line_number": 29,
+  "original_snippet": "-",
+  "mutated_snippet": "–",
+  "file_path": "packages/react-art/npm/Rectangle.js",
+  "context": {
+    "file_lines": 128,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 1,
+    "density": 0.713,
+    "line_indent": 0,
+    "containing_function": null
+  }
+}

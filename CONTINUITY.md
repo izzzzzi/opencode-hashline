@@ -1,0 +1,25 @@
+- Goal (incl. success criteria):
+  - Читать запрошенные пользователем файлы и подтверждать факт чтения без лишних действий.
+- Constraints/Assumptions:
+  - Отвечать на русском языке.
+  - Не изменять код без явного запроса.
+- Key decisions:
+  - Выполнять запросы на чтение буквально: подтверждать, что конкретный файл прочитан.
+- State:
+  - Done:
+    - `README.md` прочитан несколько раз по запросу пользователя.
+    - `benchmarks/benchmark.ts` прочитан и подтвержден.
+    - `README.md` снова прочитан по последнему запросу.
+    - `package.json` прочитан и готов к обсуждению.
+  - Now:
+    - Дать краткое резюме `README.md` по текущему запросу пользователя.
+  - Next:
+    - После ответа: ждать следующую команду (чтение/резюме/правки).
+- Open questions (UNCONFIRMED if needed):
+  - Нет.
+- Working set (files/ids/commands):
+  - `/Users/apple/Desktop/opencode-hashline/README.md`
+  - `/Users/apple/Desktop/opencode-hashline/benchmarks/benchmark.ts`
+  - `/Users/apple/Desktop/opencode-hashline/CONTINUITY.md`
+  - `/Users/apple/Desktop/opencode-hashline/package.json`
+  - Запрос пользователя: "@README.md что тут?"

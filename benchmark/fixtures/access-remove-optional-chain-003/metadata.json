@@ -1,0 +1,19 @@
+{
+  "mutation_type": "remove-optional-chain",
+  "mutation_category": "access",
+  "difficulty": "hard",
+  "difficulty_score": 9,
+  "line_number": 292,
+  "original_snippet": "?.",
+  "mutated_snippet": ".",
+  "file_path": "packages/react-devtools-shared/src/hooks/astUtils.js",
+  "context": {
+    "file_lines": 638,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 22,
+    "density": 0.743,
+    "line_indent": 6,
+    "containing_function": "getHookVariableName"
+  }
+}

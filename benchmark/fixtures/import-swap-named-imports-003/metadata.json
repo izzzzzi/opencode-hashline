@@ -1,0 +1,19 @@
+{
+  "mutation_type": "swap-named-imports",
+  "mutation_category": "import",
+  "difficulty": "hard",
+  "difficulty_score": 6,
+  "line_number": 11,
+  "original_snippet": "useContext, useMemo, useRef, useState",
+  "mutated_snippet": "useMemo, useContext, useRef, useState",
+  "file_path": "packages/react-devtools-shared/src/devtools/views/Components/NativeStyleEditor/StyleEditor.js",
+  "context": {
+    "file_lines": 297,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 13,
+    "density": 0.77,
+    "line_indent": 0,
+    "containing_function": null
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "mutation_type": "swap-nullish",
+  "mutation_category": "operator",
+  "difficulty": "medium",
+  "difficulty_score": 7,
+  "line_number": 95,
+  "original_snippet": "||",
+  "mutated_snippet": "??",
+  "file_path": "packages/react-dom-bindings/src/events/plugins/EnterLeaveEventPlugin.js",
+  "context": {
+    "file_lines": 174,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 2,
+    "density": 0.805,
+    "line_indent": 6,
+    "containing_function": "extractEvents"
+  }
+}

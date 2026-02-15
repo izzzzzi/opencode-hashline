@@ -1,0 +1,19 @@
+{
+  "mutation_type": "swap-comparison",
+  "mutation_category": "operator",
+  "difficulty": "hard",
+  "difficulty_score": 8,
+  "line_number": 569,
+  "original_snippet": ">",
+  "mutated_snippet": ">=",
+  "file_path": "packages/react-server-dom-parcel/src/server/ReactFlightDOMServerNode.js",
+  "context": {
+    "file_lines": 714,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 31,
+    "density": 0.764,
+    "line_indent": 4,
+    "containing_function": null
+  }
+}

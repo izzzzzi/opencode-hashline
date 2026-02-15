@@ -1,0 +1,19 @@
+{
+  "mutation_type": "swap-regex-quantifier",
+  "mutation_category": "regex",
+  "difficulty": "easy",
+  "difficulty_score": 6,
+  "line_number": 19,
+  "original_snippet": "+",
+  "mutated_snippet": "*",
+  "file_path": "packages/react-devtools-shared/src/devtools/views/ErrorBoundary/githubAPI.js",
+  "context": {
+    "file_lines": 54,
+    "is_repeated_line": false,
+    "repeat_count": 0,
+    "similar_block_count": 2,
+    "density": 0.783,
+    "line_indent": 2,
+    "containing_function": "searchGitHubIssuesURL"
+  }
+}
