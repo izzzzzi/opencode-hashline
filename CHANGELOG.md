@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.6...v1.1.0) (2026-02-21)
+
+
+### Features
+
+* make Russian README default, rename build output to opencode-hashline.js ([9a62087](https://github.com/izzzzzi/opencode-hashline/commit/9a620877a8f577e4a3a98bd7fbeb7d0dee896d4f))
+
 ## [1.0.6](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.5...v1.0.6) (2026-02-15)
 
 
