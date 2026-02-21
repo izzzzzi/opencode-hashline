@@ -2,7 +2,7 @@
 
 # 🔗 opencode-hashline
 
-**Content-addressable line hashing for precise AI code editing**
+**Контентно-адресуемое хеширование строк для точного редактирования кода с помощью AI**
 
 [![CI](https://github.com/izzzzzi/opencode-hashline/actions/workflows/ci.yml/badge.svg)](https://github.com/izzzzzi/opencode-hashline/actions/workflows/ci.yml)
 [![Release](https://github.com/izzzzzi/opencode-hashline/actions/workflows/release.yml/badge.svg)](https://github.com/izzzzzi/opencode-hashline/actions/workflows/release.yml)
@@ -14,19 +14,19 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&colorA=18181B&colorB=3178C6)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-ESM-green?style=flat&colorA=18181B&colorB=339933)](https://nodejs.org/)
 
-[🇷🇺 Русский](README.ru.md) | **🇬🇧 English**
+**🇷🇺 Русский** | [🇬🇧 English](README.en.md)
 
 <br />
 
-*Hashline plugin for [OpenCode](https://github.com/anomalyco/opencode) — annotate every line with a deterministic hash tag so the AI can reference and edit code with surgical precision.*
+*Hashline-плагин для [OpenCode](https://github.com/anomalyco/opencode) — аннотирует каждую строку файла детерминированным хеш-тегом, чтобы AI мог ссылаться на код и редактировать его с хирургической точностью.*
 
 </div>
 
 ---
 
-## 📖 What is Hashline?
+## 📖 Что такое Hashline?
 
-Hashline annotates every line of a file with a short, deterministic hex hash tag. When the AI reads a file, it sees:
+Hashline аннотирует каждую строку файла коротким детерминированным hex-хешем. Когда AI читает файл, он видит:
 
 ```
 #HL 1:a3f|function hello() {
@@ -34,35 +34,35 @@ Hashline annotates every line of a file with a short, deterministic hex hash tag
 #HL 3:0e7|}
 ```
 
-> **Note:** Hash length is adaptive — it depends on file size (3 chars for ≤4096 lines, 4 chars for >4096 lines). Minimum hash length is 3 to reduce collision risk. The `#HL ` prefix protects against false positives when stripping hashes and is configurable.
+> **Примечание:** Длина хеша адаптивная — она зависит от размера файла (2 символа для ≤256 строк, 3 символа для ≤4096 строк, 4 символа для >4096 строк). В примерах ниже используются 3-символьные хеши. Префикс `#HL ` защищает от ложных срабатываний при удалении хешей и является настраиваемым.
 
-The AI model can then reference lines by their hash tags for precise editing:
+AI-модель может ссылаться на строки по их хеш-тегам для точного редактирования:
 
-- **"Replace line `2:f1c`"** — target a specific line unambiguously
-- **"Replace block from `1:a3f` to `3:0e7`"** — target a range of lines
-- **"Insert after `3:0e7`"** — insert at a precise location
+- **«Заменить строку `2:f1c`»** — указать конкретную строку однозначно
+- **«Заменить блок от `1:a3f` до `3:0e7`»** — указать диапазон строк
+- **«Вставить после `3:0e7`»** — вставить в точное место
 
-### 🤔 Why does this help?
+### 🤔 Почему это помогает?
 
-Traditional line numbers shift as edits are made, causing off-by-one errors and stale references. Hashline tags are **content-addressable** — they're derived from both the line index and the line's content, so they serve as a stable, verifiable reference that the AI can use to communicate about code locations with precision.
+Традиционные номера строк сдвигаются при редактировании, вызывая ошибки смещения и устаревшие ссылки. Хеш-теги Hashline **контентно-адресуемы** — они вычисляются из индекса строки и её содержимого, что делает их стабильной, верифицируемой ссылкой для точной коммуникации о местоположении в коде.
 
 ---
 
-## ✨ Features
+## ✨ Возможности
 
-### 📏 Adaptive Hash Length
+### 📏 Адаптивная длина хеша
 
-Hash length automatically adapts to file size to minimize collisions:
+Длина хеша автоматически адаптируется к размеру файла для минимизации коллизий:
 
-| File Size | Hash Length | Possible Values |
-|-----------|:----------:|:---------------:|
-| ≤ 256 lines | 2 hex chars | 256 |
-| ≤ 4,096 lines | 3 hex chars | 4,096 |
-| > 4,096 lines | 4 hex chars | 65,536 |
+| Размер файла | Длина хеша | Возможных значений |
+|-------------|:----------:|:------------------:|
+| ≤ 256 строк | 2 hex-символа | 256 |
+| ≤ 4 096 строк | 3 hex-символа | 4 096 |
+| > 4 096 строк | 4 hex-символа | 65 536 |
 
-### 🏷️ Magic Prefix (`#HL `)
+### 🏷️ Магический префикс (`#HL `)
 
-Lines are annotated with a configurable prefix (default: `#HL `) to prevent false positives when stripping hashes. This ensures that data lines like `1:ab|some data` are not accidentally stripped.
+Строки аннотируются настраиваемым префиксом (по умолчанию: `#HL `), чтобы предотвратить ложные срабатывания при удалении хешей. Это гарантирует, что строки данных вроде `1:ab|some data` не будут случайно обрезаны.
 
 ```
 #HL 1:a3|function hello() {
@@ -70,23 +70,23 @@ Lines are annotated with a configurable prefix (default: `#HL `) to prevent fals
 #HL 3:0e|}
 ```
 
-The prefix can be customized or disabled for backward compatibility:
+Префикс можно настроить или отключить для обратной совместимости:
 
 ```typescript
-// Custom prefix
+// Кастомный префикс
 const hl = createHashline({ prefix: ">> " });
 
-// Disable prefix (legacy format: "1:a3|code")
+// Отключить префикс (legacy-формат: "1:a3|code")
 const hl = createHashline({ prefix: false });
 ```
 
-### 💾 LRU Caching
+### 💾 LRU-кеширование
 
-Built-in LRU cache (`filePath → annotatedContent`) with configurable size (default: 100 files). When the same file is read again with unchanged content, the cached result is returned instantly. Cache is automatically invalidated when file content changes.
+Встроенный LRU-кеш (`filePath → annotatedContent`) с настраиваемым размером (по умолчанию 100 файлов). При повторном чтении того же файла с неизменённым содержимым возвращается кешированный результат. Кеш автоматически инвалидируется при изменении содержимого файла.
 
-### ✅ Hash Verification
+### ✅ Верификация хешей
 
-Verify that a line hasn't changed since it was read — protects against race conditions:
+Проверка того, что строка не изменилась с момента чтения — защита от race conditions:
 
 ```typescript
 import { verifyHash } from "opencode-hashline";
@@ -97,65 +97,65 @@ if (!result.valid) {
 }
 ```
 
-Hash verification uses the length of the provided hash reference (not the current file size), so a reference like `2:f1` remains valid even if the file has grown.
+Верификация хешей использует длину предоставленной хеш-ссылки (а не текущий размер файла), поэтому ссылка вроде `2:f1` остаётся валидной даже если файл вырос.
 
-### 🔍 Indentation-Sensitive Hashing
+### 🔍 Чувствительность к отступам
 
-Hash computation uses `trimEnd()` (not `trim()`), so changes to leading whitespace (indentation) are detected as content changes, while trailing whitespace is ignored.
+Вычисление хеша использует `trimEnd()` (а не `trim()`), поэтому изменения ведущих пробелов (отступов) обнаруживаются как изменения содержимого, а завершающие пробелы игнорируются.
 
-### 📐 Range Operations
+### 📐 Range-операции
 
-Resolve and replace ranges of lines by hash references:
+Резолвинг и замена диапазонов строк по хеш-ссылкам:
 
 ```typescript
 import { resolveRange, replaceRange } from "opencode-hashline";
 
-// Get lines between two hash references
+// Получить строки между двумя хеш-ссылками
 const range = resolveRange("1:a3f", "3:0e7", content);
 console.log(range.lines); // ["function hello() {", '  return "world";', "}"]
 
-// Replace a range with new content
+// Заменить диапазон новым содержимым
 const newContent = replaceRange(
   "1:a3f", "3:0e7", content,
   "function goodbye() {\n  return 'farewell';\n}"
 );
 ```
 
-### ⚙️ Configurable
+### ⚙️ Конфигурируемость
 
-Create custom Hashline instances with specific settings:
+Создание кастомных экземпляров Hashline с определёнными настройками:
 
 ```typescript
 import { createHashline } from "opencode-hashline";
 
 const hl = createHashline({
   exclude: ["**/node_modules/**", "**/*.min.js"],
-  maxFileSize: 512_000,  // 512 KB
-  hashLength: 3,         // force 3-char hashes
-  cacheSize: 200,        // cache up to 200 files
-  prefix: "#HL ",        // magic prefix (default)
+  maxFileSize: 512_000,  // 512 КБ
+  hashLength: 3,         // принудительно 3-символьные хеши
+  cacheSize: 200,        // кешировать до 200 файлов
+  prefix: "#HL ",        // магический префикс (по умолчанию)
 });
 
-// Use the configured instance
+// Использование настроенного экземпляра
 const annotated = hl.formatFileWithHashes(content, "src/app.ts");
 const isExcluded = hl.shouldExclude("node_modules/foo.js"); // true
 ```
 
-#### Configuration Options
+#### Параметры конфигурации
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `exclude` | `string[]` | See below | Glob patterns for files to skip |
-| `maxFileSize` | `number` | `1_000_000` | Max file size in bytes |
-| `hashLength` | `number \| undefined` | `undefined` (adaptive) | Force specific hash length |
-| `cacheSize` | `number` | `100` | Max files in LRU cache |
-| `prefix` | `string \| false` | `"#HL "` | Line prefix (`false` to disable) |
+| Параметр | Тип | По умолчанию | Описание |
+|----------|-----|:------------:|----------|
+| `exclude` | `string[]` | См. ниже | Glob-паттерны для исключения файлов |
+| `maxFileSize` | `number` | `1_000_000` | Макс. размер файла в байтах |
+| `hashLength` | `number \| undefined` | `undefined` (адаптивно) | Принудительная длина хеша |
+| `cacheSize` | `number` | `100` | Макс. файлов в LRU-кеше |
+| `prefix` | `string \| false` | `"#HL "` | Префикс строки (`false` для отключения) |
 
-Default exclude patterns cover: lock files, `node_modules`, minified files, binary files (images, fonts, archives, etc.).
+Паттерны исключения по умолчанию: lock-файлы, `node_modules`, минифицированные файлы, бинарные файлы (изображения, шрифты, архивы и т.д.).
 
 ---
 
-## 📦 Installation
+## 📦 Установка
 
 ```bash
 npm install opencode-hashline
@@ -163,9 +163,9 @@ npm install opencode-hashline
 
 ---
 
-## 🔧 Configuration
+## 🔧 Конфигурация
 
-Add the plugin to your `opencode.json`:
+Добавьте плагин в ваш `opencode.json`:
 
 ```json
 {
@@ -174,17 +174,17 @@ Add the plugin to your `opencode.json`:
 }
 ```
 
-### Configuration Files
+### Файлы конфигурации
 
-The plugin loads configuration from the following locations (in priority order, later overrides earlier):
+Плагин загружает конфигурацию из следующих мест (в порядке приоритета, более поздние перезаписывают ранние):
 
-| Priority | Location | Scope |
-|:--------:|----------|-------|
-| 1 | `~/.config/opencode/opencode-hashline.json` | Global (all projects) |
-| 2 | `<project>/opencode-hashline.json` | Project-local |
-| 3 | Programmatic config via `createHashlinePlugin()` | Factory argument |
+| Приоритет | Расположение | Область |
+|:---------:|-------------|---------|
+| 1 | `~/.config/opencode/opencode-hashline.json` | Глобальная (все проекты) |
+| 2 | `<project>/opencode-hashline.json` | Локальная (проект) |
+| 3 | Программная конфигурация через `createHashlinePlugin()` | Аргумент фабрики |
 
-Example `opencode-hashline.json`:
+Пример `opencode-hashline.json`:
 
 ```json
 {
@@ -196,73 +196,48 @@ Example `opencode-hashline.json`:
 }
 ```
 
-That's it! The plugin automatically:
+Вот и всё! Плагин автоматически:
 
-| # | Action | Description |
-|:-:|--------|-------------|
-| 1 | 📝 **Annotates file reads** | When the AI reads a file, each line gets a `#HL` hash prefix |
-| 2 | 📎 **Annotates `@file` mentions** | Files attached via `@filename` in prompts are also annotated with hashlines |
-| 3 | ✂️ **Strips hash prefixes on edits** | When the AI writes/edits a file, hash prefixes are removed before applying changes |
-| 4 | 🧠 **Injects system prompt instructions** | The AI is told how to interpret and use hashline references |
-| 5 | 💾 **Caches results** | Repeated reads of the same file return cached annotations |
-| 6 | 🔍 **Filters by tool** | Only file-reading tools (e.g. `read_file`, `cat`, `view`) get annotations; other tools are left untouched |
-| 7 | ⚙️ **Respects config** | Excluded files and files exceeding `maxFileSize` are skipped |
-| 8 | 🧩 **Registers `hashline_edit` tool** | Applies replace/delete/insert by hash references, without exact `old_string` matching |
+| # | Действие | Описание |
+|:-:|----------|----------|
+| 1 | 📝 **Аннотирует чтение файлов** | При чтении файла AI каждая строка получает `#HL` хеш-префикс |
+| 2 | 📎 **Аннотирует `@file` упоминания** | Файлы, прикреплённые через `@filename` в промпте, тоже аннотируются хешлайнами |
+| 3 | ✂️ **Убирает хеш-префиксы при редактировании** | При записи/редактировании файла хеш-префиксы удаляются перед применением изменений |
+| 4 | 🧠 **Внедряет инструкции в системный промпт** | AI получает инструкции по интерпретации и использованию hashline-ссылок |
+| 5 | 💾 **Кеширует результаты** | Повторные чтения того же файла возвращают кешированные аннотации |
+| 6 | 🔍 **Фильтрует по инструменту** | Только инструменты чтения файлов (например `read_file`, `cat`, `view`) получают аннотации; остальные не затрагиваются |
+| 7 | ⚙️ **Учитывает конфигурацию** | Исключённые файлы и файлы, превышающие `maxFileSize`, пропускаются |
+| 8 | 🧩 **Регистрирует `hashline_edit` tool** | Применяет replace/delete/insert по hash-ссылкам без точного `old_string`-матчинга |
 
 ---
 
-## 🛠️ How It Works
+## 🛠️ Как это работает
 
-### Hash Computation
+### Вычисление хеша
 
-Each line's hash is computed from:
-- The **0-based line index**
-- The **trimEnd'd line content** — leading whitespace (indentation) IS significant
+Хеш каждой строки вычисляется из:
+- **0-based индекса** строки
+- **Содержимого строки** с обрезанными завершающими пробелами (trimEnd) — ведущие пробелы (отступы) ЗНАЧИМЫ
 
-This is fed through an **FNV-1a** hash function, reduced to the appropriate modulus based on file size, and rendered as a hex string.
+Это подаётся в хеш-функцию **FNV-1a**, сводится к соответствующему модулю в зависимости от размера файла и отображается как hex-строка.
 
-### Plugin Hooks & Tool
+### Хуки и tool плагина
 
-The plugin registers four OpenCode hooks and one custom tool:
+Плагин регистрирует четыре хука OpenCode и один кастомный tool:
 
-| Hook | Purpose |
-|------|---------|
-| `tool.hashline_edit` | Hash-aware edits by references like `5:a3f` or `#HL 5:a3f|...` |
-| `tool.execute.after` | Injects hashline annotations into file-read tool output |
-| `tool.execute.before` | Strips hashline prefixes from file-edit tool arguments |
-| `chat.message` | Annotates `@file` mentions in user messages (writes annotated content to a temp file and swaps the URL) |
-| `experimental.chat.system.transform` | Adds hashline usage instructions to the system prompt |
+| Хук | Назначение |
+|-----|-----------|
+| `tool.hashline_edit` | Hash-aware правки по ссылкам вроде `5:a3f` или `#HL 5:a3f|...` |
+| `tool.execute.after` | Добавляет hashline-аннотации в вывод инструментов чтения файлов |
+| `tool.execute.before` | Убирает hashline-префиксы из аргументов инструментов редактирования |
+| `chat.message` | Аннотирует `@file` упоминания в сообщениях пользователя (записывает аннотированный контент во временный файл и подменяет URL) |
+| `experimental.chat.system.transform` | Добавляет инструкции по использованию hashline в системный промпт |
 
-### Tool Detection Heuristic (`isFileReadTool`)
+---
 
-The plugin needs to determine which tools are "file-read" tools (to annotate their output) vs "file-edit" tools (to strip hash prefixes from their input). Since the OpenCode plugin API does not expose a semantic tool category, the plugin uses a name-based heuristic:
+## 🔌 Программный API
 
-**Exact match** — the tool name (case-insensitive) is compared against the allow-list:
-- `read`, `file_read`, `read_file`, `cat`, `view`
-
-**Dotted suffix match** — for namespaced tools like `mcp.read` or `custom_provider.file_read`, the part after the last `.` is matched against the same list.
-
-**Fallback heuristic** — if the tool has `path`, `filePath`, or `file` arguments AND the tool name does NOT contain write/edit/execute indicators (`write`, `edit`, `patch`, `execute`, `run`, `command`, `shell`, `bash`), it is treated as a file-read tool.
-
-**How to customize:**
-- Name your custom tool to match one of the patterns above (e.g. `my_read_file`)
-- Include `path`, `filePath`, or `file` in its arguments
-- Or extend the `FILE_READ_TOOLS` list in a fork
-
-The `isFileReadTool()` function is exported for testing and advanced usage:
-
-```typescript
-import { isFileReadTool } from "opencode-hashline";
-
-isFileReadTool("read_file");                          // true
-isFileReadTool("mcp.read");                           // true
-isFileReadTool("custom_reader", { path: "app.ts" });  // true (heuristic)
-isFileReadTool("file_write", { path: "app.ts" });     // false (write indicator)
-```
-
-### Programmatic API
-
-The core utilities are exported from the `opencode-hashline/utils` subpath (to avoid conflicts with OpenCode's plugin loader, which calls every export as a Plugin function):
+Основные утилиты экспортируются из субпути `opencode-hashline/utils` (чтобы избежать конфликтов с загрузчиком плагинов OpenCode, который вызывает каждый экспорт как функцию Plugin):
 
 ```typescript
 import {
@@ -286,161 +261,161 @@ import {
 } from "opencode-hashline/utils";
 ```
 
-### Core Functions
+### Основные функции
 
 ```typescript
-// Compute hash for a single line
-const hash = computeLineHash(0, "function hello() {"); // e.g. "a3f"
+// Вычислить хеш для одной строки
+const hash = computeLineHash(0, "function hello() {"); // например "a3f"
 
-// Compute hash with specific length
-const hash4 = computeLineHash(0, "function hello() {", 4); // e.g. "a3f2"
+// Вычислить хеш с определённой длиной
+const hash4 = computeLineHash(0, "function hello() {", 4); // например "a3f2"
 
-// Annotate entire file content (adaptive hash length, with #HL prefix)
+// Аннотировать содержимое файла (адаптивная длина хеша, с префиксом #HL)
 const annotated = formatFileWithHashes(fileContent);
 // "#HL 1:a3|function hello() {\n#HL 2:f1|  return \"world\";\n#HL 3:0e|}"
 
-// Annotate with specific hash length
+// Аннотировать с определённой длиной хеша
 const annotated3 = formatFileWithHashes(fileContent, 3);
 
-// Annotate without prefix (legacy format)
+// Аннотировать без префикса (legacy-формат)
 const annotatedLegacy = formatFileWithHashes(fileContent, undefined, false);
 
-// Strip annotations to get original content
+// Убрать аннотации, получить оригинальное содержимое
 const original = stripHashes(annotated);
 ```
 
-### Hash References & Verification
+### Хеш-ссылки и верификация
 
 ```typescript
-// Parse a hash reference
+// Разобрать хеш-ссылку
 const { line, hash } = parseHashRef("2:f1c"); // { line: 2, hash: "f1c" }
 
-// Normalize from an annotated line
+// Нормализовать ссылку из аннотированной строки
 const ref = normalizeHashRef("#HL 2:f1c|const x = 1;"); // "2:f1c"
 
-// Build a lookup map
+// Построить карту соответствий
 const map = buildHashMap(fileContent); // Map<"2:f1c", 2>
 
-// Verify a hash reference (uses hash.length, not file size)
+// Верифицировать хеш-ссылку (использует hash.length, а не размер файла)
 const result = verifyHash(2, "f1c", fileContent);
 ```
 
-### Range Operations
+### Range-операции
 
 ```typescript
-// Resolve a range
+// Резолвить диапазон
 const range = resolveRange("1:a3f", "3:0e7", fileContent);
 
-// Replace a range
-const newContent = replaceRange("1:a3f", "3:0e7", fileContent, "new content");
+// Заменить диапазон
+const newContent = replaceRange("1:a3f", "3:0e7", fileContent, "новое содержимое");
 
-// Hash-aware edit operation (replace/delete/insert_before/insert_after)
+// Hash-aware операция редактирования (replace/delete/insert_before/insert_after)
 const edited = applyHashEdit(
-  { operation: "replace", startRef: "1:a3f", endRef: "3:0e7", replacement: "new content" },
+  { operation: "replace", startRef: "1:a3f", endRef: "3:0e7", replacement: "новое содержимое" },
   fileContent
 ).content;
 ```
 
-### Utilities
+### Утилиты
 
 ```typescript
-// Check if a file should be excluded
+// Проверить, нужно ли исключить файл
 const excluded = shouldExclude("node_modules/foo.js", ["**/node_modules/**"]);
 
-// Create a configured instance
+// Создать настроенный экземпляр
 const hl = createHashline({ cacheSize: 50, hashLength: 3 });
 ```
 
 ---
 
-## 📊 Benchmark
+## 📊 Бенчмарк
 
-### Correctness: hashline vs str_replace
+### Корректность: hashline vs str_replace
 
-We tested both approaches on **60 fixtures from [react-edit-benchmark](https://github.com/can1357/oh-my-pi/tree/main/packages/react-edit-benchmark)** — mutated React source files with known bugs (flipped booleans, swapped operators, removed guard clauses, etc.):
+Оба подхода протестированы на **60 фикстурах из [react-edit-benchmark](https://github.com/can1357/oh-my-pi/tree/main/packages/react-edit-benchmark)** — мутированных файлах React с известными багами (инвертированные булевы, перепутанные операторы, удалённые guard-клаузы и т.д.):
 
 | | hashline | str_replace |
 |---|:---:|:---:|
-| **Passed** | **60/60 (100%)** | 58/60 (96.7%) |
-| **Failed** | 0 | 2 |
-| **Ambiguous edits** | 0 | 4 |
+| **Прошло** | **60/60 (100%)** | 58/60 (96.7%) |
+| **Провалено** | 0 | 2 |
+| **Неоднозначные правки** | 0 | 4 |
 
-str_replace fails when the `old_string` appears multiple times in the file (e.g. repeated guard clauses, similar code blocks). Hashline addresses each line uniquely via `lineNumber:hash`, so ambiguity is impossible.
+str_replace ломается, когда `old_string` встречается в файле несколько раз (например, повторяющиеся guard-клаузы, похожие блоки кода). Hashline адресует каждую строку уникально через `lineNumber:hash`, поэтому неоднозначность исключена.
 
 ```bash
-# Run yourself:
-npx tsx benchmark/run.ts              # hashline mode
-npx tsx benchmark/run.ts --no-hash    # str_replace mode
+# Запустите сами:
+npx tsx benchmark/run.ts              # режим hashline
+npx tsx benchmark/run.ts --no-hash    # режим str_replace
 ```
 
 <details>
-<summary>str_replace failures (structural category)</summary>
+<summary>Ошибки str_replace (категория structural)</summary>
 
-- `structural-remove-early-return-001` — `old_string` matched multiple locations, wrong one replaced
-- `structural-remove-early-return-002` — same issue
-- `structural-delete-statement-002` — ambiguous match (first match happened to be correct)
-- `structural-delete-statement-003` — ambiguous match (first match happened to be correct)
+- `structural-remove-early-return-001` — `old_string` совпал в нескольких местах, замена применена не к тому
+- `structural-remove-early-return-002` — аналогичная проблема
+- `structural-delete-statement-002` — неоднозначное совпадение (первое совпадение оказалось верным)
+- `structural-delete-statement-003` — неоднозначное совпадение (первое совпадение оказалось верным)
 
 </details>
 
-### Token Overhead
+### Расход токенов
 
-Hashline annotations add `#HL <line>:<hash>|` prefix (~12 chars / ~3 tokens) per line:
+Аннотации hashline добавляют префикс `#HL <line>:<hash>|` (~12 символов / ~3 токена) на строку:
 
-| | Plain | Annotated | Overhead |
+| | Без хешей | С хешами | Оверхед |
 |---|---:|---:|:---:|
-| **Characters** | 404K | 564K | +40% |
-| **Tokens (~)** | ~101K | ~141K | +40% |
+| **Символы** | 404K | 564K | +40% |
+| **Токены (~)** | ~101K | ~141K | +40% |
 
-Overhead is stable at ~40% regardless of file size. For a typical 200-line file (~800 tokens), hashline adds ~600 tokens — negligible in a 200K context window.
+Оверхед стабильно ~40% независимо от размера файла. Для типичного файла на 200 строк (~800 токенов) hashline добавляет ~600 токенов — пренебрежимо мало при контекстном окне в 200K.
 
-### Performance
+### Производительность
 
-| File Size | Annotate | Edit | Strip |
-|----------:|:--------:|:----:|:-----:|
-| **10** lines | 0.05 ms | 0.01 ms | 0.03 ms |
-| **100** lines | 0.12 ms | 0.02 ms | 0.08 ms |
-| **1,000** lines | 0.95 ms | 0.04 ms | 0.60 ms |
-| **5,000** lines | 4.50 ms | 0.08 ms | 2.80 ms |
-| **10,000** lines | 9.20 ms | 0.10 ms | 5.50 ms |
+| Размер файла | Аннотация | Правка | Удаление хешей |
+|-------------:|:---------:|:------:|:--------------:|
+| **10** строк | 0.05 мс | 0.01 мс | 0.03 мс |
+| **100** строк | 0.12 мс | 0.02 мс | 0.08 мс |
+| **1 000** строк | 0.95 мс | 0.04 мс | 0.60 мс |
+| **5 000** строк | 4.50 мс | 0.08 мс | 2.80 мс |
+| **10 000** строк | 9.20 мс | 0.10 мс | 5.50 мс |
 
-> A typical 1,000-line source file is annotated in **< 1ms** — imperceptible to the user.
+> Типичный файл из 1 000 строк аннотируется за **< 1 мс** — незаметно для пользователя.
 
 ---
 
-## 🧑‍💻 Development
+## 🧑‍💻 Разработка
 
 ```bash
-# Install dependencies
+# Установить зависимости
 npm install
 
-# Run tests
+# Запустить тесты
 npm test
 
-# Build
+# Собрать
 npm run build
 
-# Type check
+# Проверка типов
 npm run typecheck
 ```
 
 ---
 
-## 💡 Inspiration & Background
+## 💡 Вдохновение и теоретическая база
 
-The idea behind hashline is inspired by concepts from **oh-my-pi** by [can1357](https://github.com/can1357/oh-my-pi) — an AI coding agent toolkit (coding agent CLI, unified LLM API, TUI libraries) — and the article "The Harness Problem."
+Идея hashline вдохновлена концепциями из **oh-my-pi** от [can1357](https://github.com/can1357/oh-my-pi) — AI-тулкита для разработки (coding agent CLI, unified LLM API, TUI-библиотеки) — и статьи «The Harness Problem» (проблема обвязки).
 
-**The Harness Problem** describes a fundamental limitation of current AI coding tools: while modern LLMs are extremely capable, the *harness* layer — the tooling that feeds context to the model and applies its edits back to files — loses information and introduces errors. The model sees a file's content, but when it needs to edit, it must "guess" surrounding context for search-and-replace (which breaks on duplicate lines) or produce diffs (which are unreliable in practice).
+**Суть проблемы:** современные AI-модели обладают огромными возможностями, но инструменты (harness), которые передают модели контекст и применяют её правки к файлам, теряют информацию и порождают ошибки. Модель видит содержимое файла, но при редактировании вынуждена «угадывать» контекст окружающих строк. Search-and-replace ломается на дубликатах строк, а diff-формат тоже ненадёжен на практике.
 
-Hashline solves this by assigning each line a short, deterministic hash tag (e.g. `2:f1c`), making line addressing **exact and unambiguous**. The model can reference any line or range precisely, eliminating off-by-one errors and duplicate-line confusion.
+Hashline решает эту проблему, присваивая каждой строке короткий детерминированный хеш-тег (например, `2:f1c`), что делает адресацию строк **точной и однозначной**. Модель может ссылаться на любую строку или диапазон без ошибок смещения и путаницы с дубликатами.
 
-**References:**
-- [oh-my-pi by can1357](https://github.com/can1357/oh-my-pi) — AI coding agent toolkit: coding agent CLI, unified LLM API, TUI libraries
-- [The Harness Problem](https://blog.can.ac/2026/02/12/the-harness-problem/) — blog post describing the problem in detail
-- [Описание подхода на Хабре](https://habr.com/ru/companies/bothub/news/995986/) — overview of the approach in Russian
+**Ссылки:**
+- [oh-my-pi от can1357](https://github.com/can1357/oh-my-pi) — AI-тулкит для разработки: coding agent CLI, unified LLM API, TUI-библиотеки
+- [The Harness Problem](https://blog.can.ac/2026/02/12/the-harness-problem/) — блог-пост с подробным описанием проблемы
+- [Статья на Хабре](https://habr.com/ru/companies/bothub/news/995986/) — описание подхода на русском языке
 
 ---
 
-## 📄 License
+## 📄 Лицензия
 
 [MIT](LICENSE) © opencode-hashline contributors

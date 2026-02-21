@@ -14,7 +14,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&colorA=18181B&colorB=3178C6)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-ESM-green?style=flat&colorA=18181B&colorB=339933)](https://nodejs.org/)
 
-**🇷🇺 Русский** | [🇬🇧 English](README.md)
+**🇷🇺 Русский** | [🇬🇧 English](README.en.md)
 
 <br />
 

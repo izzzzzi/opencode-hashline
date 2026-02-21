@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/utils.ts"],
+  entry: { "opencode-hashline": "src/index.ts", utils: "src/utils.ts" },
   format: ["esm", "cjs"],
   dts: true,
   clean: true,
