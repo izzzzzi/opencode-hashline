@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.2...v1.1.3) (2026-02-21)
+
+
+### Bug Fixes
+
+* security hardening from audit findings ([a4a7ad7](https://github.com/izzzzzi/opencode-hashline/commit/a4a7ad79b43df0a8354609650db04135ca23b48c))
+
 ## [1.1.2](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.1...v1.1.2) (2026-02-21)
 
 
