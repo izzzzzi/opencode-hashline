@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.0...v1.1.1) (2026-02-21)
+
+
+### Bug Fixes
+
+* access denied on hashline_edit for non-git projects ([3bc2cb3](https://github.com/izzzzzi/opencode-hashline/commit/3bc2cb3330984c88919aee9007c055b475f01d21)), closes [#7](https://github.com/izzzzzi/opencode-hashline/issues/7)
+
 # [1.1.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.0.6...v1.1.0) (2026-02-21)
 
 
