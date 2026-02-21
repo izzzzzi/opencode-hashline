@@ -70,6 +70,23 @@ export const DEFAULT_EXCLUDE_PATTERNS: string[] = [
   "**/*.dll",
   "**/*.so",
   "**/*.dylib",
+  // Sensitive credential and secret files
+  "**/.env",
+  "**/.env.*",
+  "**/*.pem",
+  "**/*.key",
+  "**/*.p12",
+  "**/*.pfx",
+  "**/id_rsa",
+  "**/id_rsa.pub",
+  "**/id_ed25519",
+  "**/id_ed25519.pub",
+  "**/id_ecdsa",
+  "**/id_ecdsa.pub",
+  "**/.npmrc",
+  "**/.netrc",
+  "**/credentials",
+  "**/credentials.json",
 ];
 
 /** Default prefix for hashline annotations */
@@ -205,16 +222,24 @@ export function formatFileWithHashes(
   const effectiveLen = hashLen && hashLen >= 3 ? hashLen : getAdaptiveHashLength(lines.length);
   const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : (prefix === false ? "" : prefix);
 
-  // Collision detection: compute all hashes, detect collisions, re-hash with longer length
+  // Collision detection: compute all hashes, detect collisions, re-hash with longer length.
+  // Both colliding lines are upgraded to avoid ambiguous references.
   const hashes: string[] = new Array(lines.length);
-  const seen = new Map<string, number>(); // hash -> first index that used it
+  const seen = new Map<string, number>(); // short hash -> first line index
+  const upgraded = new Set<number>(); // line indices already upgraded to longer hash
 
   for (let idx = 0; idx < lines.length; idx++) {
     const hash = computeLineHash(idx, lines[idx], effectiveLen);
     if (seen.has(hash)) {
-      // Collision detected — use longer hash for this line
+      // Collision detected — upgrade both colliding lines to a longer hash
       const longerLen = Math.min(effectiveLen + 1, 8);
+      const prevIdx = seen.get(hash)!;
+      if (!upgraded.has(prevIdx)) {
+        hashes[prevIdx] = computeLineHash(prevIdx, lines[prevIdx], longerLen);
+        upgraded.add(prevIdx);
+      }
       hashes[idx] = computeLineHash(idx, lines[idx], longerLen);
+      upgraded.add(idx);
     } else {
       seen.set(hash, idx);
       hashes[idx] = hash;
@@ -282,7 +307,8 @@ export function stripHashes(content: string, prefix?: string | false): string {
 export function parseHashRef(ref: string): { line: number; hash: string } {
   const match = ref.match(/^(\d+):([0-9a-f]{2,8})$/);
   if (!match) {
-    throw new Error(`Invalid hash reference: "${ref}". Expected format: "<line>:<2-8 char hex>"`);
+    const display = ref.length > 100 ? `${ref.slice(0, 100)}…` : ref;
+    throw new Error(`Invalid hash reference: "${display}". Expected format: "<line>:<2-8 char hex>"`);
   }
   return {
     line: parseInt(match[1], 10),
@@ -312,8 +338,9 @@ export function normalizeHashRef(ref: string): string {
     return `${parseInt(annotated[1], 10)}:${annotated[2].toLowerCase()}`;
   }
 
+  const display = ref.length > 100 ? `${ref.slice(0, 100)}…` : ref;
   throw new Error(
-    `Invalid hash reference: "${ref}". Expected "<line>:<hash>" or an annotated line like "#HL <line>:<hash>|..."`,
+    `Invalid hash reference: "${display}". Expected "<line>:<hash>" or an annotated line like "#HL <line>:<hash>|..."`,
   );
 }
 
@@ -692,6 +719,9 @@ export class HashlineCache {
 // Glob matching (using picomatch for full glob support)
 // ---------------------------------------------------------------------------
 
+/** Cache for compiled glob matchers — avoids recompiling the same pattern on every call */
+const globMatcherCache = new Map<string, ReturnType<typeof picomatch>>();
+
 /**
  * Glob matcher using picomatch for full glob support.
  * Supports `*`, `**`, `?`, `{a,b}`, `[abc]`, and all standard glob patterns.
@@ -702,7 +732,11 @@ export function matchesGlob(filePath: string, pattern: string): boolean {
   const normalizedPath = filePath.replace(/\\/g, "/");
   const normalizedPattern = pattern.replace(/\\/g, "/");
 
-  const isMatch = picomatch(normalizedPattern, { dot: true });
+  let isMatch = globMatcherCache.get(normalizedPattern);
+  if (!isMatch) {
+    isMatch = picomatch(normalizedPattern, { dot: true });
+    globMatcherCache.set(normalizedPattern, isMatch);
+  }
   return isMatch(normalizedPath);
 }
 

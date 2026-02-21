@@ -1,8 +1,8 @@
 import { readFileSync, realpathSync, writeFileSync } from "fs";
-import { isAbsolute, relative, resolve, sep } from "path";
+import { dirname, isAbsolute, relative, resolve, sep } from "path";
 import { z } from "zod";
 import type { ToolContext } from "@opencode-ai/plugin";
-import { applyHashEdit, type HashlineCache, type HashlineConfig, type HashEditOperation } from "./hashline";
+import { applyHashEdit, getByteLength, type HashlineCache, type HashlineConfig, type HashEditOperation } from "./hashline";
 
 /**
  * Hash-aware edit tool.
@@ -31,6 +31,7 @@ export function createHashlineEditTool(
         .describe('End hash reference for range operations. Defaults to startRef when omitted.'),
       replacement: z
         .string()
+        .max(10_000_000)
         .optional()
         .describe("Replacement/inserted content. Required for replace/insert operations."),
     },
@@ -43,24 +44,43 @@ export function createHashlineEditTool(
         replacement?: string;
       };
       const absPath = isAbsolute(path) ? path : resolve(context.directory, path);
-      // Use realpathSync to resolve symlinks — prevents symlink-based traversal
-      let realAbs: string;
-      try {
-        realAbs = realpathSync(absPath);
-      } catch {
-        // File doesn't exist yet (new file) — fall back to resolve()
-        realAbs = resolve(absPath);
-      }
       const realDirectory = realpathSync(resolve(context.directory));
       const realWorktree = realpathSync(resolve(context.worktree));
 
       // Mirror OpenCode's Instance.containsPath logic:
       // For non-git projects, worktree is set to "/" — skip worktree check
       // in that case, as it would match any absolute path.
+      // On Windows also block bare drive roots ("C:\") and UNC roots ("\\server\share").
       function isWithin(filePath: string, dir: string): boolean {
         if (dir === sep) return false;
+        if (process.platform === "win32") {
+          if (/^[A-Za-z]:\\$/.test(dir)) return false;
+          if (/^\\\\[^\\]+\\[^\\]+$/.test(dir)) return false;
+        }
         return filePath === dir || filePath.startsWith(dir + sep);
       }
+
+      // Use realpathSync to resolve symlinks — prevents symlink-based traversal.
+      // For new (non-existent) files, verify the parent directory instead.
+      let realAbs: string;
+      try {
+        realAbs = realpathSync(absPath);
+      } catch {
+        // File doesn't exist yet — verify parent directory is within project
+        // to prevent symlink-based traversal via intermediate path components.
+        const parentDir = dirname(absPath);
+        let realParent: string;
+        try {
+          realParent = realpathSync(parentDir);
+        } catch {
+          throw new Error(`Access denied: cannot verify parent directory for "${path}"`);
+        }
+        if (!isWithin(realParent, realDirectory) && !isWithin(realParent, realWorktree)) {
+          throw new Error(`Access denied: "${path}" resolves outside the project directory`);
+        }
+        realAbs = resolve(absPath);
+      }
+
       if (!isWithin(realAbs, realDirectory) && !isWithin(realAbs, realWorktree)) {
         throw new Error(`Access denied: "${path}" resolves outside the project directory`);
       }
@@ -73,6 +93,12 @@ export function createHashlineEditTool(
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to read "${displayPath}": ${reason}`);
+      }
+
+      if (config.maxFileSize > 0 && getByteLength(current) > config.maxFileSize) {
+        throw new Error(
+          `File "${displayPath}" exceeds the configured maximum size (${config.maxFileSize} bytes)`,
+        );
       }
 
       let nextContent: string;
