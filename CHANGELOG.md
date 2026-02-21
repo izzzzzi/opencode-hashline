@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.3...v1.2.0) (2026-02-21)
+
+
+### Features
+
+* add apply_patch benchmark mode and update README comparison table ([9c46a8c](https://github.com/izzzzzi/opencode-hashline/commit/9c46a8cc4c8aea8966a376def12ddcd5b1f8e889))
+
 ## [1.1.3](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.2...v1.1.3) (2026-02-21)
 
 
