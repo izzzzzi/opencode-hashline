@@ -51,8 +51,17 @@ export function createHashlineEditTool(
         // File doesn't exist yet (new file) — fall back to resolve()
         realAbs = resolve(absPath);
       }
+      const realDirectory = realpathSync(resolve(context.directory));
       const realWorktree = realpathSync(resolve(context.worktree));
-      if (realAbs !== realWorktree && !realAbs.startsWith(realWorktree + sep)) {
+
+      // Mirror OpenCode's Instance.containsPath logic:
+      // For non-git projects, worktree is set to "/" — skip worktree check
+      // in that case, as it would match any absolute path.
+      function isWithin(filePath: string, dir: string): boolean {
+        if (dir === sep) return false;
+        return filePath === dir || filePath.startsWith(dir + sep);
+      }
+      if (!isWithin(realAbs, realDirectory) && !isWithin(realAbs, realWorktree)) {
         throw new Error(`Access denied: "${path}" resolves outside the project directory`);
       }
       const normalizedAbs = resolve(absPath);
