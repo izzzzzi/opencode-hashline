@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.1...v1.1.2) (2026-02-21)
+
+
+### Bug Fixes
+
+* preserve CRLF line endings on Windows after hashline edits ([215668e](https://github.com/izzzzzi/opencode-hashline/commit/215668e73cdb9f3e17e1138e3108294af86fecd8))
+
 ## [1.1.1](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.0...v1.1.1) (2026-02-21)
 
 
