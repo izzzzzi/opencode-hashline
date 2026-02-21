@@ -17,6 +17,7 @@ import {
   matchesGlob,
   resolveConfig,
   getByteLength,
+  detectLineEnding,
   DEFAULT_CONFIG,
   DEFAULT_PREFIX,
 } from "../hashline";
@@ -1060,5 +1061,86 @@ describe("createHashline", () => {
       content,
     );
     expect(result.content).toBe("a\nx\nc");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CRLF line ending preservation
+// ---------------------------------------------------------------------------
+
+describe("detectLineEnding", () => {
+  it("detects LF", () => {
+    expect(detectLineEnding("line1\nline2\n")).toBe("\n");
+  });
+
+  it("detects CRLF", () => {
+    expect(detectLineEnding("line1\r\nline2\r\n")).toBe("\r\n");
+  });
+
+  it("returns LF when content has no line endings", () => {
+    expect(detectLineEnding("single line")).toBe("\n");
+  });
+});
+
+describe("CRLF preservation", () => {
+  const crlfContent = "line one\r\nline two\r\nline three\r\n";
+
+  it("formatFileWithHashes: outputs LF annotations for CRLF input (clean for AI reading)", () => {
+    const result = formatFileWithHashes(crlfContent);
+    expect(result).not.toContain("\r");
+    expect(result).toContain("#HL 1:");
+    expect(result).toContain("|line one");
+  });
+
+  it("formatFileWithHashes: produces same hashes for LF and CRLF files with identical content", () => {
+    const lf = "line one\nline two\nline three\n";
+    const crlf = "line one\r\nline two\r\nline three\r\n";
+    const resultLf = formatFileWithHashes(lf);
+    const resultCrlf = formatFileWithHashes(crlf);
+    expect(resultLf).toBe(resultCrlf);
+  });
+
+  it("stripHashes: preserves CRLF line endings", () => {
+    const annotated = "#HL 1:abc|line one\r\n#HL 2:def|line two\r\n";
+    const result = stripHashes(annotated);
+    expect(result).toBe("line one\r\nline two\r\n");
+  });
+
+  it("applyHashEdit replace: preserves CRLF line endings in output", () => {
+    const h1 = computeLineHash(0, "line one");
+    const result = applyHashEdit(
+      { operation: "replace", startRef: `1:${h1}`, replacement: "replaced" },
+      crlfContent,
+    );
+    expect(result.content).toContain("\r\n");
+    expect(result.content).not.toMatch(/(?<!\r)\n/);
+  });
+
+  it("applyHashEdit delete: preserves CRLF line endings in output", () => {
+    const h2 = computeLineHash(1, "line two");
+    const result = applyHashEdit(
+      { operation: "delete", startRef: `2:${h2}` },
+      crlfContent,
+    );
+    expect(result.content).toContain("\r\n");
+    expect(result.content).not.toContain("line two");
+  });
+
+  it("applyHashEdit insert_after: preserves CRLF line endings in output", () => {
+    const h1 = computeLineHash(0, "line one");
+    const result = applyHashEdit(
+      { operation: "insert_after", startRef: `1:${h1}`, replacement: "inserted" },
+      crlfContent,
+    );
+    expect(result.content).toContain("\r\n");
+    expect(result.content).toContain("inserted");
+  });
+
+  it("replaceRange: preserves CRLF line endings in output", () => {
+    const h1 = computeLineHash(0, "line one");
+    const h2 = computeLineHash(1, "line two");
+    const result = replaceRange(`1:${h1}`, `2:${h2}`, crlfContent, "new line");
+    expect(result).toContain("\r\n");
+    expect(result).toContain("new line");
   });
 });

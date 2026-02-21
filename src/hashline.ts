@@ -200,7 +200,8 @@ export function formatFileWithHashes(
   hashLen?: number,
   prefix?: string | false,
 ): string {
-  const lines = content.split("\n");
+  const normalized = content.includes("\r\n") ? content.replace(/\r\n/g, "\n") : content;
+  const lines = normalized.split("\n");
   const effectiveLen = hashLen && hashLen >= 3 ? hashLen : getAdaptiveHashLength(lines.length);
   const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : (prefix === false ? "" : prefix);
 
@@ -255,7 +256,9 @@ export function stripHashes(content: string, prefix?: string | false): string {
     stripRegexCache.set(escapedPrefix, hashLinePattern);
   }
 
-  return content
+  const lineEnding = detectLineEnding(content);
+  const normalized = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
+  const result = normalized
     .split("\n")
     .map((line) => {
       const match = line.match(hashLinePattern!);
@@ -267,6 +270,7 @@ export function stripHashes(content: string, prefix?: string | false): string {
       return line;
     })
     .join("\n");
+  return lineEnding === "\r\n" ? result.replace(/\n/g, "\r\n") : result;
 }
 
 /**
@@ -463,16 +467,19 @@ export function resolveRange(
     );
   }
 
+  const lineEnding = detectLineEnding(content);
+  const normalized = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
+
   // Split once and reuse for both verifications and range extraction
-  const lines = content.split("\n");
+  const lines = normalized.split("\n");
 
   // Use hash.length from the refs for verification, not adaptive
-  const startVerify = verifyHash(start.line, start.hash, content, hashLen, lines);
+  const startVerify = verifyHash(start.line, start.hash, normalized, hashLen, lines);
   if (!startVerify.valid) {
     throw new Error(`Start reference invalid: ${startVerify.message}`);
   }
 
-  const endVerify = verifyHash(end.line, end.hash, content, hashLen, lines);
+  const endVerify = verifyHash(end.line, end.hash, normalized, hashLen, lines);
   if (!endVerify.valid) {
     throw new Error(`End reference invalid: ${endVerify.message}`);
   }
@@ -483,7 +490,7 @@ export function resolveRange(
     startLine: start.line,
     endLine: end.line,
     lines: rangeLines,
-    content: rangeLines.join("\n"),
+    content: rangeLines.join(lineEnding),
   };
 }
 
@@ -505,13 +512,16 @@ export function replaceRange(
   replacement: string,
   hashLen?: number,
 ): string {
+  const lineEnding = detectLineEnding(content);
+  const normalized = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
   // resolveRange already splits once internally
-  const range = resolveRange(startRef, endRef, content, hashLen);
-  const lines = content.split("\n");
+  const range = resolveRange(startRef, endRef, normalized, hashLen);
+  const lines = normalized.split("\n");
   const before = lines.slice(0, range.startLine - 1);
   const after = lines.slice(range.endLine);
   const replacementLines = replacement.split("\n");
-  return [...before, ...replacementLines, ...after].join("\n");
+  const result = [...before, ...replacementLines, ...after].join("\n");
+  return lineEnding === "\r\n" ? result.replace(/\n/g, "\r\n") : result;
 }
 
 /**
@@ -525,11 +535,14 @@ export function applyHashEdit(
   content: string,
   hashLen?: number,
 ): HashEditResult {
+  const lineEnding = detectLineEnding(content);
+  const workContent = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
+
   const normalizedStart = normalizeHashRef(input.startRef);
   const start = parseHashRef(normalizedStart);
-  const lines = content.split("\n");
+  const lines = workContent.split("\n");
 
-  const startVerify = verifyHash(start.line, start.hash, content, hashLen, lines);
+  const startVerify = verifyHash(start.line, start.hash, workContent, hashLen, lines);
   if (!startVerify.valid) {
     throw new Error(`Start reference invalid: ${startVerify.message}`);
   }
@@ -551,7 +564,7 @@ export function applyHashEdit(
       operation: input.operation,
       startLine: start.line,
       endLine: start.line,
-      content: next,
+      content: lineEnding === "\r\n" ? next.replace(/\n/g, "\r\n") : next,
     };
   }
 
@@ -563,7 +576,7 @@ export function applyHashEdit(
     );
   }
 
-  const endVerify = verifyHash(end.line, end.hash, content, hashLen, lines);
+  const endVerify = verifyHash(end.line, end.hash, workContent, hashLen, lines);
   if (!endVerify.valid) {
     throw new Error(`End reference invalid: ${endVerify.message}`);
   }
@@ -586,7 +599,7 @@ export function applyHashEdit(
     operation: input.operation,
     startLine: start.line,
     endLine: end.line,
-    content: next,
+    content: lineEnding === "\r\n" ? next.replace(/\n/g, "\r\n") : next,
   };
 }
 
@@ -712,6 +725,14 @@ export function shouldExclude(filePath: string, patterns: string[]): boolean {
 const textEncoder = new TextEncoder();
 export function getByteLength(content: string): number {
   return textEncoder.encode(content).length;
+}
+
+/**
+ * Detect the line ending style used in a string.
+ * Returns "\r\n" if any CRLF sequence is present, otherwise "\n".
+ */
+export function detectLineEnding(content: string): "\r\n" | "\n" {
+  return content.includes("\r\n") ? "\r\n" : "\n";
 }
 
 // ---------------------------------------------------------------------------
