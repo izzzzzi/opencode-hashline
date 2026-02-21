@@ -3,12 +3,14 @@
  * Deterministic benchmark for opencode-hashline.
  *
  * Modes:
- *   npx tsx benchmark/run.ts              — hashline mode (hash-reference edits)
- *   npx tsx benchmark/run.ts --no-hash    — str_replace mode (exact string matching)
+ *   npx tsx benchmark/run.ts               — hashline mode (hash-reference edits)
+ *   npx tsx benchmark/run.ts --no-hash     — str_replace mode (exact string matching)
+ *   npx tsx benchmark/run.ts --apply-patch — apply_patch mode (unified diff context matching)
  *
  * For each fixture (mutated React source file):
  *   hashline:    annotate → hash-reference → applyHashEdit → verify
  *   str_replace: compute old_string/new_string → string.replace → verify
+ *   apply_patch: build unified diff (3 context lines) → apply by context anchor → verify
  */
 
 import { readFileSync, readdirSync, statSync } from "fs";
@@ -23,7 +25,8 @@ import {
 } from "../src/hashline";
 
 const FIXTURES_DIR = join(import.meta.dirname!, "fixtures");
-const USE_HASHLINE = !process.argv.includes("--no-hash");
+const USE_HASHLINE = !process.argv.includes("--no-hash") && !process.argv.includes("--apply-patch");
+const USE_APPLY_PATCH = process.argv.includes("--apply-patch");
 
 interface FixtureMeta {
   mutation_type: string;
@@ -185,6 +188,103 @@ function applyStrReplace(
 }
 
 // ---------------------------------------------------------------------------
+// apply_patch mode: unified diff with context-line anchor matching
+// ---------------------------------------------------------------------------
+
+const PATCH_CONTEXT = 3;
+
+interface ApplyPatchEdit {
+  contextBefore: string[];
+  removedLines: string[];
+  addedLines: string[];
+  contextAfter: string[];
+}
+
+/**
+ * Build a unified-diff-style edit: extract the changed region plus surrounding
+ * context lines. This mirrors how models using apply_patch produce patches.
+ */
+function buildApplyPatchEdit(input: string, expected: string): ApplyPatchEdit | null {
+  const inputLines = input.split("\n");
+  const expectedLines = expected.split("\n");
+
+  let firstDiff = -1;
+  const maxLen = Math.max(inputLines.length, expectedLines.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (inputLines[i] !== expectedLines[i]) {
+      if (firstDiff === -1) firstDiff = i;
+    }
+  }
+  if (firstDiff === -1) return null;
+
+  let endInput = inputLines.length - 1;
+  let endExpected = expectedLines.length - 1;
+  while (
+    endInput > firstDiff &&
+    endExpected > firstDiff &&
+    inputLines[endInput] === expectedLines[endExpected]
+  ) {
+    endInput--;
+    endExpected--;
+  }
+
+  const startCtx = Math.max(0, firstDiff - PATCH_CONTEXT);
+  const endCtxInput = Math.min(inputLines.length - 1, endInput + PATCH_CONTEXT);
+
+  return {
+    contextBefore: inputLines.slice(startCtx, firstDiff),
+    removedLines: inputLines.slice(firstDiff, endInput + 1),
+    addedLines: expectedLines.slice(firstDiff, endExpected + 1),
+    contextAfter: inputLines.slice(endInput + 1, endCtxInput + 1),
+  };
+}
+
+/**
+ * Apply a patch edit by locating the context anchor in the file.
+ *
+ * Searches for the sequence [contextBefore + removedLines] in the file.
+ * If the anchor is unique → apply cleanly.
+ * If the anchor matches multiple locations → ambiguous (apply first, report warning).
+ * If the anchor is not found → fail.
+ */
+function applyPatchEdit(
+  content: string,
+  edit: ApplyPatchEdit,
+): { content: string; error?: string } {
+  const lines = content.split("\n");
+  const anchor = [...edit.contextBefore, ...edit.removedLines];
+
+  if (anchor.length === 0) return { content };
+
+  // Find all positions where the anchor matches
+  const matchPositions: number[] = [];
+  outer: for (let i = 0; i <= lines.length - anchor.length; i++) {
+    for (let j = 0; j < anchor.length; j++) {
+      if (lines[i + j] !== anchor[j]) continue outer;
+    }
+    matchPositions.push(i);
+  }
+
+  if (matchPositions.length === 0) {
+    return { content, error: "Patch context not found in file" };
+  }
+
+  const applyAt = matchPositions[0];
+  const before = lines.slice(0, applyAt + edit.contextBefore.length);
+  const after = lines.slice(applyAt + edit.contextBefore.length + edit.removedLines.length);
+  const result = [...before, ...edit.addedLines, ...after].join("\n");
+
+  if (matchPositions.length > 1) {
+    return {
+      content: result,
+      error: `AMBIGUOUS: patch context matches ${matchPositions.length} locations (first used)`,
+    };
+  }
+
+  return { content: result };
+}
+
+// ---------------------------------------------------------------------------
 // Test runner
 // ---------------------------------------------------------------------------
 
@@ -259,6 +359,34 @@ function runFixture(fixtureDir: string): TestResult {
           }
         }
       }
+    } else if (USE_APPLY_PATCH) {
+      // --- apply_patch mode ---
+      result.annotateOk = true;
+      result.stripRoundTrip = true;
+
+      const edit = buildApplyPatchEdit(input, expected);
+      if (!edit) {
+        result.error = "No diff found";
+        return result;
+      }
+
+      const t1 = performance.now();
+      const { content: edited, error } = applyPatchEdit(input, edit);
+      result.editTimeMs = performance.now() - t1;
+      result.editApplied = true;
+      result.editCorrect = edited === expected;
+
+      if (error) {
+        result.error = error;
+        if (error.startsWith("AMBIGUOUS") && edited === expected) {
+          result.editCorrect = true;
+          result.error = `${error} (but first match was correct)`;
+        }
+      }
+
+      if (!result.editCorrect && !result.error) {
+        result.error = "Result doesn't match expected";
+      }
     } else {
       // --- str_replace mode ---
       result.annotateOk = true; // no annotation step
@@ -306,11 +434,16 @@ const fixtures = readdirSync(FIXTURES_DIR)
   })
   .sort();
 
-const mode = USE_HASHLINE ? "hashline" : "str_replace";
+const mode = USE_HASHLINE ? "hashline" : USE_APPLY_PATCH ? "apply_patch" : "str_replace";
+const modeDesc = USE_HASHLINE
+  ? "hashline (hash-reference edits)"
+  : USE_APPLY_PATCH
+    ? "apply_patch (unified diff context matching)"
+    : "str_replace (exact string matching)";
 console.log(`\nopencode-hashline Benchmark (${mode})`);
 console.log(`${"=".repeat(36 + mode.length)}`);
 console.log(`Fixtures: ${fixtures.length}`);
-console.log(`Mode:     ${USE_HASHLINE ? "hashline (hash-reference edits)" : "str_replace (exact string matching)"}`);
+console.log(`Mode:     ${modeDesc}`);
 console.log(``);
 
 const results: TestResult[] = [];
@@ -338,7 +471,7 @@ for (const fixture of fixtures) {
 
 // Summary
 console.log(``);
-console.log(`Results (${mode})`);
+console.log(`Results (${modeDesc})`);
 console.log(`-------`);
 console.log(`  Total:     ${results.length}`);
 console.log(`  Passed:    \x1b[32m${passed}\x1b[0m`);

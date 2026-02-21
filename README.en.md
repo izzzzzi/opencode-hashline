@@ -44,7 +44,12 @@ The AI model can then reference lines by their hash tags for precise editing:
 
 ### 🤔 Why does this help?
 
-Traditional line numbers shift as edits are made, causing off-by-one errors and stale references. Hashline tags are **content-addressable** — they're derived from both the line index and the line's content, so they serve as a stable, verifiable reference that the AI can use to communicate about code locations with precision.
+Hashline solves the fundamental problems of the two existing AI file-editing approaches:
+
+- **`str_replace`** requires an absolutely exact match of `old_string`. Any extra whitespace, wrong indentation, or duplicate lines in the file — and the edit fails with "String to replace not found". This is so common it has a [mega-thread of 27+ related issues on GitHub](https://github.com/anthropics/claude-code/issues).
+- **`apply_patch`** (unified diff) only works on models specifically trained for this format. On other models the results are catastrophic: Grok 4 fails **50.7%** of patches, GLM-4.7 fails **46.2%** ([source](https://habr.com/ru/companies/bothub/news/995986/)).
+
+Hashline addresses each line with a unique `lineNumber:hash`. No string matching, no model-specific training dependency — just precise, verifiable line addressing.
 
 ---
 
@@ -355,22 +360,25 @@ const hl = createHashline({ cacheSize: 50, hashLength: 3 });
 
 ## 📊 Benchmark
 
-### Correctness: hashline vs str_replace
+### Correctness: hashline vs str_replace vs apply_patch
 
-We tested both approaches on **60 fixtures from [react-edit-benchmark](https://github.com/can1357/oh-my-pi/tree/main/packages/react-edit-benchmark)** — mutated React source files with known bugs (flipped booleans, swapped operators, removed guard clauses, etc.):
+We tested all three approaches on **60 fixtures from [react-edit-benchmark](https://github.com/can1357/oh-my-pi/tree/main/packages/react-edit-benchmark)** — mutated React source files with known bugs (flipped booleans, swapped operators, removed guard clauses, etc.):
 
-| | hashline | str_replace |
-|---|:---:|:---:|
-| **Passed** | **60/60 (100%)** | 58/60 (96.7%) |
-| **Failed** | 0 | 2 |
-| **Ambiguous edits** | 0 | 4 |
+| | hashline | str_replace | apply_patch |
+|---|:---:|:---:|:---:|
+| **Passed** | **60/60 (100%)** | 58/60 (96.7%) | **60/60 (100%)** |
+| **Failed** | 0 | 2 | 0 |
+| **Ambiguous edits** | 0 | 4 | 0 |
 
-str_replace fails when the `old_string` appears multiple times in the file (e.g. repeated guard clauses, similar code blocks). Hashline addresses each line uniquely via `lineNumber:hash`, so ambiguity is impossible.
+`apply_patch` with context lines matches hashline's reliability — **when the model generates the patch correctly**. The key weakness of `apply_patch` is its dependency on model-specific training: models not trained on this format produce malformed diffs (missing context lines, wrong indentation), causing patch application to fail.
+
+`str_replace` fails when `old_string` appears multiple times in the file (repeated guard clauses, similar code blocks). Hashline addresses each line uniquely via `lineNumber:hash` — ambiguity is impossible and no model-specific format is required.
 
 ```bash
 # Run yourself:
-npx tsx benchmark/run.ts              # hashline mode
-npx tsx benchmark/run.ts --no-hash    # str_replace mode
+npx tsx benchmark/run.ts               # hashline mode
+npx tsx benchmark/run.ts --no-hash     # str_replace mode
+npx tsx benchmark/run.ts --apply-patch # apply_patch mode
 ```
 
 <details>
