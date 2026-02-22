@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="banner.jpg" alt="opencode-hashline banner" width="100%" />
+
 # 🔗 opencode-hashline
 
 **Content-addressable line hashing for precise AI code editing**
