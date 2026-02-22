@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.2.0...v1.3.0) (2026-02-22)
+
+
+### Features
+
+* add file revision, safe reapply, and structured error diagnostics ([e2d00d2](https://github.com/izzzzzi/opencode-hashline/commit/e2d00d219bfe6b14f58d1462ce8e0a55f6e8ae6a))
+
 # [1.2.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.1.3...v1.2.0) (2026-02-21)
 
 
