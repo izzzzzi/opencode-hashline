@@ -104,6 +104,49 @@ if (!result.valid) {
 
 Верификация хешей использует длину предоставленной хеш-ссылки (а не текущий размер файла), поэтому ссылка вроде `2:f1` остаётся валидной даже если файл вырос.
 
+### 🔒 Ревизия файла (`fileRev`)
+
+Помимо построчных хешей, hashline вычисляет хеш всего файла (FNV-1a, 8 hex-символов). Он добавляется первой строкой аннотации:
+
+```
+#HL REV:72c4946c
+#HL 1:a3f|function hello() {
+#HL 2:f1c|  return "world";
+```
+
+При редактировании передайте `fileRev` в `hashline_edit` — если файл изменился с момента чтения, правка будет отклонена с ошибкой `FILE_REV_MISMATCH`.
+
+### 🔄 Safe Reapply
+
+Если строка переместилась (например, из-за вставки строк выше), `safeReapply` находит её по хешу контента:
+
+- **1 кандидат** — правка применяется к новой позиции
+- **>1 кандидатов** — ошибка `AMBIGUOUS_REAPPLY` (неоднозначность)
+- **0 кандидатов** — ошибка `HASH_MISMATCH`
+
+```typescript
+const result = applyHashEdit(
+  { operation: "replace", startRef: "1:a3f", replacement: "new" },
+  content,
+  undefined,
+  true, // safeReapply
+);
+```
+
+### 🏷️ Structured Errors
+
+Все ошибки hashline — экземпляры `HashlineError` с кодом, диагностикой и подсказками:
+
+| Код | Описание |
+|-----|----------|
+| `HASH_MISMATCH` | Содержимое строки изменилось |
+| `FILE_REV_MISMATCH` | Файл модифицирован с момента чтения |
+| `AMBIGUOUS_REAPPLY` | Несколько кандидатов при safe reapply |
+| `TARGET_OUT_OF_RANGE` | Номер строки за пределами файла |
+| `INVALID_REF` | Некорректная хеш-ссылка |
+| `INVALID_RANGE` | Начало диапазона после конца |
+| `MISSING_REPLACEMENT` | Операция replace/insert без содержимого |
+
 ### 🔍 Чувствительность к отступам
 
 Вычисление хеша использует `trimEnd()` (а не `trim()`), поэтому изменения ведущих пробелов (отступов) обнаруживаются как изменения содержимого, а завершающие пробелы игнорируются.
@@ -155,6 +198,8 @@ const isExcluded = hl.shouldExclude("node_modules/foo.js"); // true
 | `hashLength` | `number \| undefined` | `undefined` (адаптивно) | Принудительная длина хеша |
 | `cacheSize` | `number` | `100` | Макс. файлов в LRU-кеше |
 | `prefix` | `string \| false` | `"#HL "` | Префикс строки (`false` для отключения) |
+| `fileRev` | `boolean` | `true` | Включать ревизию файла (`#HL REV:...`) в аннотации |
+| `safeReapply` | `boolean` | `false` | Автоматический поиск перемещённых строк по хешу |
 
 Паттерны исключения по умолчанию: lock-файлы, `node_modules`, минифицированные файлы, бинарные файлы (изображения, шрифты, архивы и т.д.).
 
@@ -417,9 +462,12 @@ npm run typecheck
 
 Hashline решает эту проблему, присваивая каждой строке короткий детерминированный хеш-тег (например, `2:f1c`), что делает адресацию строк **точной и однозначной**. Модель может ссылаться на любую строку или диапазон без ошибок смещения и путаницы с дубликатами.
 
+Продвинутые фичи — **ревизия файла** (`fileRev`), **safe reapply** и **structured errors** — вдохновлены реализацией hash-based editing в проекте **AssistAgents** от [OzeroHAX](https://github.com/OzeroHAX/AssistAgents), который независимо применил аналогичный подход для OpenCode с дополнительными механизмами проверки целостности и диагностики ошибок.
+
 **Ссылки:**
 - [oh-my-pi от can1357](https://github.com/can1357/oh-my-pi) — AI-тулкит для разработки: coding agent CLI, unified LLM API, TUI-библиотеки
 - [The Harness Problem](https://blog.can.ac/2026/02/12/the-harness-problem/) — блог-пост с подробным описанием проблемы
+- [AssistAgents от OzeroHAX](https://github.com/OzeroHAX/AssistAgents) — hash-based editing для OpenCode с file revision, safe reapply и structured conflicts
 - [Статья на Хабре](https://habr.com/ru/companies/bothub/news/995986/) — описание подхода на русском языке
 
 ---

@@ -104,6 +104,49 @@ if (!result.valid) {
 
 Hash verification uses the length of the provided hash reference (not the current file size), so a reference like `2:f1` remains valid even if the file has grown.
 
+### 🔒 File Revision (`fileRev`)
+
+In addition to per-line hashes, hashline computes a whole-file hash (FNV-1a, 8 hex chars). It's prepended as the first annotation line:
+
+```
+#HL REV:72c4946c
+#HL 1:a3f|function hello() {
+#HL 2:f1c|  return "world";
+```
+
+Pass `fileRev` to `hashline_edit` when editing — if the file changed since it was read, the edit is rejected with `FILE_REV_MISMATCH`.
+
+### 🔄 Safe Reapply
+
+If a line moved (e.g., due to insertions above), `safeReapply` finds it by content hash:
+
+- **1 candidate** — edit applies at the new position
+- **>1 candidates** — `AMBIGUOUS_REAPPLY` error (ambiguous)
+- **0 candidates** — `HASH_MISMATCH` error
+
+```typescript
+const result = applyHashEdit(
+  { operation: "replace", startRef: "1:a3f", replacement: "new" },
+  content,
+  undefined,
+  true, // safeReapply
+);
+```
+
+### 🏷️ Structured Errors
+
+All hashline errors are instances of `HashlineError` with error codes, diagnostics, and hints:
+
+| Code | Description |
+|------|-------------|
+| `HASH_MISMATCH` | Line content changed since last read |
+| `FILE_REV_MISMATCH` | File was modified since last read |
+| `AMBIGUOUS_REAPPLY` | Multiple candidates found during safe reapply |
+| `TARGET_OUT_OF_RANGE` | Line number exceeds file length |
+| `INVALID_REF` | Malformed hash reference |
+| `INVALID_RANGE` | Start line is after end line |
+| `MISSING_REPLACEMENT` | Replace/insert operation without content |
+
 ### 🔍 Indentation-Sensitive Hashing
 
 Hash computation uses `trimEnd()` (not `trim()`), so changes to leading whitespace (indentation) are detected as content changes, while trailing whitespace is ignored.
@@ -155,6 +198,8 @@ const isExcluded = hl.shouldExclude("node_modules/foo.js"); // true
 | `hashLength` | `number \| undefined` | `undefined` (adaptive) | Force specific hash length |
 | `cacheSize` | `number` | `100` | Max files in LRU cache |
 | `prefix` | `string \| false` | `"#HL "` | Line prefix (`false` to disable) |
+| `fileRev` | `boolean` | `true` | Include file revision hash (`#HL REV:...`) in annotations |
+| `safeReapply` | `boolean` | `false` | Auto-relocate moved lines by content hash |
 
 Default exclude patterns cover: lock files, `node_modules`, minified files, binary files (images, fonts, archives, etc.).
 
@@ -442,9 +487,12 @@ The idea behind hashline is inspired by concepts from **oh-my-pi** by [can1357](
 
 Hashline solves this by assigning each line a short, deterministic hash tag (e.g. `2:f1c`), making line addressing **exact and unambiguous**. The model can reference any line or range precisely, eliminating off-by-one errors and duplicate-line confusion.
 
+The advanced features — **file revision** (`fileRev`), **safe reapply**, and **structured errors** — are inspired by the hash-based editing implementation in **AssistAgents** by [OzeroHAX](https://github.com/OzeroHAX/AssistAgents), which independently applied a similar approach for OpenCode with additional integrity checks and error diagnostics.
+
 **References:**
 - [oh-my-pi by can1357](https://github.com/can1357/oh-my-pi) — AI coding agent toolkit: coding agent CLI, unified LLM API, TUI libraries
 - [The Harness Problem](https://blog.can.ac/2026/02/12/the-harness-problem/) — blog post describing the problem in detail
+- [AssistAgents by OzeroHAX](https://github.com/OzeroHAX/AssistAgents) — hash-based editing for OpenCode with file revision, safe reapply, and structured conflicts
 - [Описание подхода на Хабре](https://habr.com/ru/companies/bothub/news/995986/) — overview of the approach in Russian
 
 ---

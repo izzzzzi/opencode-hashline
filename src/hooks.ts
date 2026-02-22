@@ -181,7 +181,7 @@ export function createFileReadAfterHook(
     }
 
     // Annotate the file content with hashline prefixes
-    const annotated = formatFileWithHashes(content, hashLen || undefined, prefix);
+    const annotated = formatFileWithHashes(content, hashLen || undefined, prefix, resolved.fileRev);
     output.output = annotated;
     debug("annotated", typeof filePath === "string" ? filePath : input.tool, "lines:", content.split("\n").length);
 
@@ -332,10 +332,32 @@ export function createSystemPromptHook(
         "- Hash references include both the line number AND the content hash, so `2:f1c` means \"line 2 with hash f1c\".",
         "- If you see a mismatch, do NOT proceed with the edit — re-read the file to get fresh references.",
         "",
+        "### File revision (`#HL REV:<hash>`):",
+        "- When files are read, the first line may contain a file revision header: `" + prefix + "REV:<8-char-hex>`.",
+        "- This is a hash of the entire file content. Pass it as the `fileRev` parameter to `hashline_edit` to verify the file hasn't changed.",
+        "- If the file was modified between read and edit, the revision check fails with `FILE_REV_MISMATCH` — re-read the file.",
+        "",
+        "### Safe reapply (`safeReapply`):",
+        "- Pass `safeReapply: true` to `hashline_edit` to enable automatic line relocation.",
+        "- If a line moved (e.g., due to insertions above), safe reapply finds it by content hash.",
+        "- If exactly one match is found, the edit proceeds at the new location.",
+        "- If multiple matches exist, the edit fails with `AMBIGUOUS_REAPPLY` — re-read the file.",
+        "",
+        "### Structured error codes:",
+        "- `HASH_MISMATCH` — line content changed since last read",
+        "- `FILE_REV_MISMATCH` — file was modified since last read",
+        "- `AMBIGUOUS_REAPPLY` — multiple candidate lines found during safe reapply",
+        "- `TARGET_OUT_OF_RANGE` — line number exceeds file length",
+        "- `INVALID_REF` — malformed hash reference",
+        "- `INVALID_RANGE` — start line is after end line",
+        "- `MISSING_REPLACEMENT` — replace/insert operation without replacement content",
+        "",
         "### Best practices:",
         "- Use hash references for all edit operations to ensure precision.",
         "- When making multiple edits, work from bottom to top to avoid line number shifts.",
         "- For large replacements, use range references (e.g., `1:a3f to 10:b2c`) instead of individual lines.",
+        "- Use `fileRev` to guard against stale edits on critical files.",
+        "- Use `safeReapply: true` when editing files that may have shifted due to earlier edits.",
       ].join("\n")
     );
   };

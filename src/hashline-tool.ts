@@ -2,7 +2,7 @@ import { readFileSync, realpathSync, writeFileSync } from "fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "path";
 import { z } from "zod";
 import type { ToolContext } from "@opencode-ai/plugin";
-import { applyHashEdit, getByteLength, type HashlineCache, type HashlineConfig, type HashEditOperation } from "./hashline";
+import { applyHashEdit, getByteLength, HashlineError, type HashlineCache, type HashlineConfig, type HashEditOperation } from "./hashline";
 
 /**
  * Hash-aware edit tool.
@@ -34,14 +34,24 @@ export function createHashlineEditTool(
         .max(10_000_000)
         .optional()
         .describe("Replacement/inserted content. Required for replace/insert operations."),
+      fileRev: z
+        .string()
+        .optional()
+        .describe("File revision hash (8-char hex from #HL REV:<hash>). When provided, verifies the file hasn't changed before editing."),
+      safeReapply: z
+        .boolean()
+        .optional()
+        .describe("Enable safe reapply: if a line moved, attempt to find it by content hash. Fails on ambiguous matches."),
     },
     async execute(args: Record<string, unknown>, context: ToolContext) {
-      const { path, operation, startRef, endRef, replacement } = args as {
+      const { path, operation, startRef, endRef, replacement, fileRev, safeReapply } = args as {
         path: string;
         operation: HashEditOperation;
         startRef: string;
         endRef?: string;
         replacement?: string;
+        fileRev?: string;
+        safeReapply?: boolean;
       };
       const absPath = isAbsolute(path) ? path : resolve(context.directory, path);
       const realDirectory = realpathSync(resolve(context.directory));
@@ -111,14 +121,19 @@ export function createHashlineEditTool(
             startRef: startRef,
             endRef: endRef,
             replacement: replacement,
+            fileRev: fileRev,
           },
           current,
           config.hashLength || undefined,
+          safeReapply ?? config.safeReapply,
         );
         nextContent = result.content;
         startLine = result.startLine;
         endLine = result.endLine;
       } catch (error) {
+        if (error instanceof HashlineError) {
+          throw new Error(`Hashline edit failed for "${displayPath}":\n${error.toDiagnostic()}`);
+        }
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(`Hashline edit failed for "${displayPath}": ${reason}`);
       }

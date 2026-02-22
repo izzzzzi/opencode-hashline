@@ -116,7 +116,7 @@ describe("isFileReadTool", () => {
 // ---------------------------------------------------------------------------
 
 describe("createFileReadAfterHook", () => {
-  const config = resolveConfig();
+  const config = resolveConfig({ fileRev: false });
   const hook = createFileReadAfterHook(undefined, config);
 
   it("annotates output for file-read tools", async () => {
@@ -252,7 +252,7 @@ describe("createFileReadAfterHook", () => {
 
   it("processes file when UTF-8 byte length is within maxFileSize", async () => {
     // "Привет" is 6 chars but 12 bytes in UTF-8
-    const customConfig = resolveConfig({ maxFileSize: 12 });
+    const customConfig = resolveConfig({ maxFileSize: 12, fileRev: false });
     const hookWithSize = createFileReadAfterHook(undefined, customConfig);
 
     const input = createReadInput("read_file", { path: "utf8.ts" });
@@ -265,7 +265,7 @@ describe("createFileReadAfterHook", () => {
   });
 
   it("uses configured hashLength", async () => {
-    const customConfig = resolveConfig({ hashLength: 3 });
+    const customConfig = resolveConfig({ hashLength: 3, fileRev: false });
     const hookWithLen = createFileReadAfterHook(undefined, customConfig);
 
     const input = createReadInput("read_file", { path: "test.ts" });
@@ -305,7 +305,7 @@ describe("createFileReadAfterHook", () => {
   });
 
   it("uses configured prefix", async () => {
-    const customConfig = resolveConfig({ prefix: ">> " });
+    const customConfig = resolveConfig({ prefix: ">> ", fileRev: false });
     const hookWithPrefix = createFileReadAfterHook(undefined, customConfig);
 
     const input = createReadInput("read_file", { path: "test.ts" });
@@ -517,7 +517,7 @@ describe("createSystemPromptHook", () => {
 
 describe("Integration: full plugin cycle", () => {
   it("read → hash → edit → verify cycle", async () => {
-    const config = resolveConfig();
+    const config = resolveConfig({ fileRev: false });
     const cache = new HashlineCache(10);
     const readHook = createFileReadAfterHook(cache, config);
     const editHook = createFileEditBeforeHook(config);
@@ -562,7 +562,7 @@ describe("Integration: full plugin cycle", () => {
   });
 
   it("detects stale content after modification", async () => {
-    const config = resolveConfig();
+    const config = resolveConfig({ fileRev: false });
     const readHook = createFileReadAfterHook(undefined, config);
 
     // Step 1: Read original file
@@ -588,7 +588,7 @@ describe("Integration: full plugin cycle", () => {
   });
 
   it("cache returns same result for unchanged content", async () => {
-    const config = resolveConfig();
+    const config = resolveConfig({ fileRev: false });
     const cache = new HashlineCache(10);
     const readHook = createFileReadAfterHook(cache, config);
 
@@ -615,7 +615,7 @@ describe("Integration: full plugin cycle", () => {
   });
 
   it("system prompt is injected with correct format", async () => {
-    const config = resolveConfig();
+    const config = resolveConfig({ fileRev: false });
     const systemHook = createSystemPromptHook(config);
 
     const output = createSystemOutput();
@@ -630,7 +630,7 @@ describe("Integration: full plugin cycle", () => {
   });
 
   it("full cycle with Unicode content", async () => {
-    const config = resolveConfig();
+    const config = resolveConfig({ fileRev: false });
     const readHook = createFileReadAfterHook(undefined, config);
     const editHook = createFileEditBeforeHook(config);
 
@@ -656,5 +656,107 @@ describe("Integration: full plugin cycle", () => {
     );
 
     expect(editOutput.args!.content).toBe(originalContent);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REV header in annotated output (hooks integration)
+// ---------------------------------------------------------------------------
+
+describe("REV header in hooks", () => {
+  it("includes REV header when fileRev config is true", async () => {
+    const config = resolveConfig({ fileRev: true });
+    const hook = createFileReadAfterHook(undefined, config);
+
+    const input = createReadInput("read_file", { path: "test.ts" });
+    const output = createReadOutput("line one\nline two");
+
+    await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
+
+    const lines = output.output!.split("\n");
+    expect(lines[0]).toMatch(/^#HL REV:[0-9a-f]{8}$/);
+    expect(lines[1]).toMatch(/^#HL 1:[0-9a-f]{3}\|line one$/);
+  });
+
+  it("does not include REV header when fileRev config is false", async () => {
+    const config = resolveConfig({ fileRev: false });
+    const hook = createFileReadAfterHook(undefined, config);
+
+    const input = createReadInput("read_file", { path: "test.ts" });
+    const output = createReadOutput("line one\nline two");
+
+    await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
+
+    expect(output.output).not.toContain("REV:");
+    expect(output.output).toMatch(/^#HL 1:/);
+  });
+
+  it("stripHashes removes REV header in edit hook roundtrip", async () => {
+    const config = resolveConfig({ fileRev: true });
+    const readHook = createFileReadAfterHook(undefined, config);
+    const editHook = createFileEditBeforeHook(config);
+
+    const original = "hello\nworld";
+    const readInput = createReadInput("read_file", { path: "rev.ts" });
+    const readOutput = createReadOutput(original);
+
+    await readHook(readInput as Parameters<typeof readHook>[0], readOutput as Parameters<typeof readHook>[1]);
+
+    // Output should have REV header
+    expect(readOutput.output!.split("\n")[0]).toMatch(/^#HL REV:/);
+
+    // Strip should recover original
+    const editInput = createEditInput("edit_file");
+    const editOutput = createEditOutput({ content: readOutput.output! });
+
+    await editHook(editInput as Parameters<typeof editHook>[0], editOutput as Parameters<typeof editHook>[1]);
+
+    expect(editOutput.args!.content).toBe(original);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// System prompt contains new sections
+// ---------------------------------------------------------------------------
+
+describe("System prompt — new sections", () => {
+  it("includes fileRev documentation", async () => {
+    const config = resolveConfig();
+    const hook = createSystemPromptHook(config);
+
+    const output = createSystemOutput();
+    await hook({} as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
+
+    const prompt = output.system[0];
+    expect(prompt).toContain("File revision");
+    expect(prompt).toContain("REV:");
+    expect(prompt).toContain("fileRev");
+  });
+
+  it("includes safeReapply documentation", async () => {
+    const config = resolveConfig();
+    const hook = createSystemPromptHook(config);
+
+    const output = createSystemOutput();
+    await hook({} as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
+
+    const prompt = output.system[0];
+    expect(prompt).toContain("Safe reapply");
+    expect(prompt).toContain("safeReapply");
+  });
+
+  it("includes structured error codes", async () => {
+    const config = resolveConfig();
+    const hook = createSystemPromptHook(config);
+
+    const output = createSystemOutput();
+    await hook({} as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
+
+    const prompt = output.system[0];
+    expect(prompt).toContain("HASH_MISMATCH");
+    expect(prompt).toContain("FILE_REV_MISMATCH");
+    expect(prompt).toContain("AMBIGUOUS_REAPPLY");
+    expect(prompt).toContain("TARGET_OUT_OF_RANGE");
+    expect(prompt).toContain("INVALID_REF");
   });
 });

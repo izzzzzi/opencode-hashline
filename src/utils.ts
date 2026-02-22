@@ -30,6 +30,11 @@ export {
   DEFAULT_CONFIG,
   DEFAULT_EXCLUDE_PATTERNS,
   DEFAULT_PREFIX,
+  computeFileRev,
+  verifyFileRev,
+  extractFileRev,
+  findCandidateLines,
+  HashlineError,
 } from "./hashline";
 
 // Types
@@ -41,6 +46,8 @@ export type {
   HashEditInput,
   HashEditOperation,
   HashEditResult,
+  HashlineErrorCode,
+  CandidateLine,
 } from "./hashline";
 
 // Hooks

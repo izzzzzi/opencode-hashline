@@ -62,6 +62,12 @@ function sanitizeConfig(raw: unknown): HashlineConfig {
   if (typeof r.debug === "boolean") {
     result.debug = r.debug;
   }
+  if (typeof r.fileRev === "boolean") {
+    result.fileRev = r.fileRev;
+  }
+  if (typeof r.safeReapply === "boolean") {
+    result.safeReapply = r.safeReapply;
+  }
 
   return result;
 }
@@ -254,4 +260,6 @@ export type {
   HashEditInput,
   HashEditOperation,
   HashEditResult,
+  HashlineErrorCode,
+  CandidateLine,
 } from "./hashline";
