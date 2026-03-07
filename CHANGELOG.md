@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.0...v1.3.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* harden temp-file handling and docs ([a0100c5](https://github.com/izzzzzi/opencode-hashline/commit/a0100c5584fa80ef85357ebf65f867d20012f080))
+
 # [1.3.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.2.0...v1.3.0) (2026-02-22)
 
 
