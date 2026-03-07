@@ -202,6 +202,42 @@ describe("formatFileWithHashes", () => {
       expect(line).toMatch(/^#HL \d+:[0-9a-f]{3,}\|/);
     }
   });
+
+  it("guarantees unique hashes even after collision upgrade", () => {
+    // Build a large file where collisions are likely at 3-char hash length.
+    // After formatting, every line:hash pair must be globally unique.
+    const lines = Array.from({ length: 5000 }, (_, i) => `content ${i}`);
+    const content = lines.join("\n");
+    const formatted = formatFileWithHashes(content);
+    const formattedLines = formatted.split("\n");
+
+    const seenHashes = new Set<string>();
+    for (const line of formattedLines) {
+      const m = line.match(/^#HL (\d+:[0-9a-f]{3,})\|/);
+      expect(m).not.toBeNull();
+      const ref = m![1];
+      expect(seenHashes.has(ref)).toBe(false);
+      seenHashes.add(ref);
+    }
+  });
+
+  it("resolves multi-way collisions (3+ lines with same base hash)", () => {
+    // Force collisions by using a very small hash length override (3 chars = 4096 values)
+    // and generating many lines. The collision resolution must handle groups of 3+.
+    const lines = Array.from({ length: 4097 }, (_, i) => `x${i}`);
+    const content = lines.join("\n");
+    const formatted = formatFileWithHashes(content, 3);
+    const formattedLines = formatted.split("\n");
+
+    const seenHashes = new Set<string>();
+    for (const line of formattedLines) {
+      const m = line.match(/^#HL (\d+:[0-9a-f]{3,})\|/);
+      expect(m).not.toBeNull();
+      const ref = m![1];
+      expect(seenHashes.has(ref)).toBe(false);
+      seenHashes.add(ref);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

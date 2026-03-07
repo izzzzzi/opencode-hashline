@@ -382,27 +382,39 @@ export function formatFileWithHashes(
   const effectiveLen = hashLen && hashLen >= 3 ? hashLen : getAdaptiveHashLength(lines.length);
   const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : (prefix === false ? "" : prefix);
 
-  // Collision detection: compute all hashes, detect collisions, re-hash with longer length.
-  // Both colliding lines are upgraded to avoid ambiguous references.
+  // Collision detection: compute all hashes, detect and resolve collisions by
+  // increasing hash length. Repeat until every hash is unique (up to 8 chars max).
+  const hashLens: number[] = new Array(lines.length).fill(effectiveLen);
   const hashes: string[] = new Array(lines.length);
-  const seen = new Map<string, number>(); // short hash -> first line index
-  const upgraded = new Set<number>(); // line indices already upgraded to longer hash
 
   for (let idx = 0; idx < lines.length; idx++) {
-    const hash = computeLineHash(idx, lines[idx], effectiveLen);
-    if (seen.has(hash)) {
-      // Collision detected — upgrade both colliding lines to a longer hash
-      const longerLen = Math.min(effectiveLen + 1, 8);
-      const prevIdx = seen.get(hash)!;
-      if (!upgraded.has(prevIdx)) {
-        hashes[prevIdx] = computeLineHash(prevIdx, lines[prevIdx], longerLen);
-        upgraded.add(prevIdx);
+    hashes[idx] = computeLineHash(idx, lines[idx], effectiveLen);
+  }
+
+  // Iteratively resolve collisions — group by hash, upgrade colliding groups
+  let hasCollisions = true;
+  while (hasCollisions) {
+    hasCollisions = false;
+    const seen = new Map<string, number[]>(); // hash -> list of line indices
+    for (let idx = 0; idx < lines.length; idx++) {
+      const h = hashes[idx];
+      const group = seen.get(h);
+      if (group) {
+        group.push(idx);
+      } else {
+        seen.set(h, [idx]);
       }
-      hashes[idx] = computeLineHash(idx, lines[idx], longerLen);
-      upgraded.add(idx);
-    } else {
-      seen.set(hash, idx);
-      hashes[idx] = hash;
+    }
+    for (const [, group] of seen) {
+      if (group.length < 2) continue;
+      // All lines in this group share the same hash — upgrade them
+      for (const idx of group) {
+        const newLen = Math.min(hashLens[idx] + 1, 8);
+        if (newLen === hashLens[idx]) continue; // already at max length
+        hashLens[idx] = newLen;
+        hashes[idx] = computeLineHash(idx, lines[idx], newLen);
+        hasCollisions = true; // re-check after upgrades
+      }
     }
   }
 

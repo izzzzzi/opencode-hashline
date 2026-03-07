@@ -63,7 +63,6 @@ Hash length automatically adapts to file size to minimize collisions:
 
 | File Size | Hash Length | Possible Values |
 |-----------|:----------:|:---------------:|
-| ≤ 256 lines | 2 hex chars | 256 |
 | ≤ 4,096 lines | 3 hex chars | 4,096 |
 | > 4,096 lines | 4 hex chars | 65,536 |
 
@@ -96,7 +95,7 @@ Built-in LRU cache (`filePath → annotatedContent`) with configurable size (def
 Verify that a line hasn't changed since it was read — protects against race conditions:
 
 ```typescript
-import { verifyHash } from "opencode-hashline";
+import { verifyHash } from "opencode-hashline/utils";
 
 const result = verifyHash(2, "f1c", currentContent);
 if (!result.valid) {
@@ -158,7 +157,7 @@ Hash computation uses `trimEnd()` (not `trim()`), so changes to leading whitespa
 Resolve and replace ranges of lines by hash references:
 
 ```typescript
-import { resolveRange, replaceRange } from "opencode-hashline";
+import { resolveRange, replaceRange } from "opencode-hashline/utils";
 
 // Get lines between two hash references
 const range = resolveRange("1:a3f", "3:0e7", content);
@@ -176,7 +175,7 @@ const newContent = replaceRange(
 Create custom Hashline instances with specific settings:
 
 ```typescript
-import { createHashline } from "opencode-hashline";
+import { createHashline } from "opencode-hashline/utils";
 
 const hl = createHashline({
   exclude: ["**/node_modules/**", "**/*.min.js"],
@@ -196,7 +195,7 @@ const isExcluded = hl.shouldExclude("node_modules/foo.js"); // true
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `exclude` | `string[]` | See below | Glob patterns for files to skip |
-| `maxFileSize` | `number` | `1_000_000` | Max file size in bytes |
+| `maxFileSize` | `number` | `1_048_576` (1 MB) | Max file size in bytes |
 | `hashLength` | `number \| undefined` | `undefined` (adaptive) | Force specific hash length |
 | `cacheSize` | `number` | `100` | Max files in LRU cache |
 | `prefix` | `string \| false` | `"#HL "` | Line prefix (`false` to disable) |
@@ -304,7 +303,7 @@ The plugin needs to determine which tools are "file-read" tools (to annotate the
 The `isFileReadTool()` function is exported for testing and advanced usage:
 
 ```typescript
-import { isFileReadTool } from "opencode-hashline";
+import { isFileReadTool } from "opencode-hashline/utils";
 
 isFileReadTool("read_file");                          // true
 isFileReadTool("mcp.read");                           // true

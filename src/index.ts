@@ -10,9 +10,10 @@
  * constants, import from "opencode-hashline/utils".
  */
 
-import { readFileSync, realpathSync, unlinkSync, writeFileSync } from "fs";
+import { readFileSync, realpathSync, writeFileSync, mkdtempSync, openSync, closeSync, rmSync, constants as fsConstants } from "fs";
 import { join, resolve, sep } from "path";
 import { homedir, tmpdir } from "os";
+import { randomBytes } from "crypto";
 import { fileURLToPath } from "url";
 import type { Plugin } from "@opencode-ai/plugin";
 import {
@@ -25,6 +26,40 @@ import { HashlineCache, resolveConfig, type HashlineConfig } from "./hashline";
 import { createHashlineEditTool } from "./hashline-tool";
 
 const CONFIG_FILENAME = "opencode-hashline.json";
+
+// Module-level temp directory registry — a single exit listener shared by all instances.
+// Each instance creates a private subdirectory; on exit we remove them all.
+const tempDirs = new Set<string>();
+let exitListenerRegistered = false;
+
+function registerTempDir(dir: string): void {
+  tempDirs.add(dir);
+  if (!exitListenerRegistered) {
+    exitListenerRegistered = true;
+    process.on("exit", () => {
+      for (const d of tempDirs) {
+        try { rmSync(d, { recursive: true, force: true }); } catch {}
+      }
+    });
+  }
+}
+
+/**
+ * Write content to a temp file inside a private directory with exclusive creation.
+ * Returns the absolute path to the created file.
+ */
+function writeTempFile(tempDir: string, content: string): string {
+  const name = `hl-${randomBytes(16).toString("hex")}.txt`;
+  const tmpPath = join(tempDir, name);
+  // O_WRONLY | O_CREAT | O_EXCL — fails if file already exists (atomic creation)
+  const fd = openSync(tmpPath, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL, 0o600);
+  try {
+    writeFileSync(fd, content, "utf-8");
+  } finally {
+    closeSync(fd);
+  }
+  return tmpPath;
+}
 
 /**
  * Sanitize and validate a raw parsed config object.
@@ -149,15 +184,9 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
       try { writeLog(debugLog, `[${new Date().toISOString()}] plugin loaded, prefix: ${JSON.stringify(config.prefix)}, maxFileSize: ${config.maxFileSize}, projectDir: ${projectDir}\n`); } catch {}
     }
 
-    // Track temp files for cleanup
-    const tempFiles = new Set<string>();
-    const cleanupTempFiles = () => {
-      for (const f of tempFiles) {
-        try { unlinkSync(f); } catch {}
-      }
-      tempFiles.clear();
-    };
-    process.on("exit", cleanupTempFiles);
+    // Create a private temp directory for this instance; cleaned up on process exit.
+    const instanceTmpDir = mkdtempSync(join(tmpdir(), "hashline-"));
+    registerTempDir(instanceTmpDir);
 
     return {
       tool: {
@@ -212,21 +241,18 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
             const cached = cache.get(filePath, content);
             if (cached) {
               // Write annotated content to temp file and swap URL
-              const tmpPath = join(tmpdir(), `hashline-${p.id}.txt`);
-              writeFileSync(tmpPath, cached, "utf-8");
-              tempFiles.add(tmpPath);
+              const tmpPath = writeTempFile(instanceTmpDir, cached);
               p.url = `file://${tmpPath}`;
               if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated (cached): ${filePath}\n`); } catch {} }
               continue;
             }
 
             // Annotate
-            const annotated = formatFileWithHashes(content, hashLen || undefined, prefix);
+            const annotated = formatFileWithHashes(content, hashLen || undefined, prefix, config.fileRev);
             cache.set(filePath, content, annotated);
 
             // Write to temp file and swap URL
-            const tmpPath = join(tmpdir(), `hashline-${p.id}.txt`);
-            writeFileSync(tmpPath, annotated, "utf-8");
+            const tmpPath = writeTempFile(instanceTmpDir, annotated);
             p.url = `file://${tmpPath}`;
 
             if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated: ${filePath} lines=${content.split("\n").length}\n`); } catch {} }
