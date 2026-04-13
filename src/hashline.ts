@@ -1053,9 +1053,8 @@ export function shouldExclude(filePath: string, patterns: string[]): boolean {
  * Uses TextEncoder for accurate UTF-8 byte counting.
  * This correctly handles multi-byte characters (Cyrillic, CJK, emoji, etc.).
  */
-const textEncoder = new TextEncoder();
 export function getByteLength(content: string): number {
-  return textEncoder.encode(content).length;
+  return Buffer.byteLength(content, "utf-8");
 }
 
 /**
