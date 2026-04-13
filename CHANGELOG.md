@@ -1,3 +1,21 @@
+## [1.3.2](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.1...v1.3.2) (2026-04-13)
+
+
+### Bug Fixes
+
+* add debug logging when callID absent (deduplication disabled) ([4b7335c](https://github.com/izzzzzi/opencode-hashline/commit/4b7335c920cfdeec0db506910a67c6363fb2844a))
+* add fallback disambiguation for max-length hash collisions ([afba0c7](https://github.com/izzzzzi/opencode-hashline/commit/afba0c7678f878197d6c6d8a14272ecfcd20d89f))
+* add safeReapply support to replaceRange ([5b6f0a9](https://github.com/izzzzzi/opencode-hashline/commit/5b6f0a995597c9ad0f51022f01e39907213a2bcc))
+* replace createBoundedSet monkey-patch with BoundedSet class ([60c3cd6](https://github.com/izzzzzi/opencode-hashline/commit/60c3cd636f1b96c9546f441d47677395c69544b8))
+* replace dynamic import('fs') with static appendFileSync import ([cb85699](https://github.com/izzzzzi/opencode-hashline/commit/cb856998aa4724567820440b51ab249209335a57))
+
+
+### Performance Improvements
+
+* cache revPattern alongside hashLinePattern in stripHashes ([847cd60](https://github.com/izzzzzi/opencode-hashline/commit/847cd6051c9fc93e01da2bee85f32a7031ce9291))
+* optimize collision resolution with dirty-set tracking (PERF-1) ([f59c243](https://github.com/izzzzzi/opencode-hashline/commit/f59c243bdbd85957a801ab72802cb2e103a6ef0e))
+* use Buffer.byteLength instead of TextEncoder allocation ([2a0c1d7](https://github.com/izzzzzi/opencode-hashline/commit/2a0c1d79812cc73b7fd60bd530e95afd8ff66211))
+
 ## [1.3.1](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.0...v1.3.1) (2026-03-07)
 
 
