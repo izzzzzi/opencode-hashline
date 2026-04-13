@@ -391,31 +391,35 @@ export function formatFileWithHashes(
     hashes[idx] = computeLineHash(idx, lines[idx], effectiveLen);
   }
 
-  // Iteratively resolve collisions — group by hash, upgrade colliding groups
+  // Iteratively resolve collisions — only rescan indices that were upgraded
+  let dirtyIndices: Set<number> | null = null; // null = scan all on first pass
   let hasCollisions = true;
   while (hasCollisions) {
     hasCollisions = false;
     const seen = new Map<string, number[]>(); // hash -> list of line indices
+
+    // Always build full hash map (needed to detect collisions between dirty and clean entries)
     for (let idx = 0; idx < lines.length; idx++) {
       const h = hashes[idx];
       const group = seen.get(h);
-      if (group) {
-        group.push(idx);
-      } else {
-        seen.set(h, [idx]);
-      }
+      if (group) { group.push(idx); } else { seen.set(h, [idx]); }
     }
+
+    const nextDirty = new Set<number>();
     for (const [, group] of seen) {
       if (group.length < 2) continue;
-      // All lines in this group share the same hash — upgrade them
+      // Only upgrade if at least one member is dirty (or first pass)
+      if (dirtyIndices !== null && !group.some(idx => dirtyIndices!.has(idx))) continue;
       for (const idx of group) {
         const newLen = Math.min(hashLens[idx] + 1, 8);
         if (newLen === hashLens[idx]) continue; // already at max length
         hashLens[idx] = newLen;
         hashes[idx] = computeLineHash(idx, lines[idx], newLen);
-        hasCollisions = true; // re-check after upgrades
+        nextDirty.add(idx);
+        hasCollisions = true;
       }
     }
+    dirtyIndices = nextDirty;
   }
 
   // Post-loop safety: if any hashes still collide at max length (extremely unlikely
