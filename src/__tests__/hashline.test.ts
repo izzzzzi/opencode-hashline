@@ -1592,3 +1592,33 @@ describe("createHashline — new methods", () => {
     expect(formatted.split("\n")[0]).not.toContain("REV:");
   });
 });
+
+// ---------------------------------------------------------------------------
+// findCandidateLines — edge cases
+// ---------------------------------------------------------------------------
+
+describe("findCandidateLines — edge cases", () => {
+  it("returns empty for single-line file", () => {
+    const lines = ["only line"];
+    const hash = computeLineHash(0, "only line");
+    const candidates = findCandidateLines(1, hash, lines);
+    expect(candidates).toEqual([]);
+  });
+
+  it("returns empty for empty-string file (one empty line)", () => {
+    const lines = [""];
+    const hash = computeLineHash(0, "");
+    const candidates = findCandidateLines(1, hash, lines);
+    expect(candidates).toEqual([]);
+  });
+
+  it("finds candidates when identical content exists at different positions", () => {
+    const lines = ["same", "same", "same"];
+    const hash = computeLineHash(0, "same");
+    const candidates = findCandidateLines(1, hash, lines);
+    for (const c of candidates) {
+      expect(c.content).toBe("same");
+      expect(c.lineNumber).not.toBe(1);
+    }
+  });
+});
