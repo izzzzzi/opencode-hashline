@@ -67,7 +67,7 @@ function writeTempFile(tempDir: string, content: string): string {
  * This prevents prototype pollution, type confusion, and prompt injection via
  * a malicious or hand-crafted config file.
  */
-function sanitizeConfig(raw: unknown): HashlineConfig {
+export function sanitizeConfig(raw: unknown): HashlineConfig {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
   const r = raw as Record<string, unknown>;
   const result: HashlineConfig = {};
