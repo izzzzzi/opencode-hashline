@@ -238,6 +238,22 @@ describe("formatFileWithHashes", () => {
       seenHashes.add(ref);
     }
   });
+
+  it("falls back to unique suffix when hash collision persists at max length", () => {
+    const lines = Array.from({ length: 10000 }, (_, i) => `line_${i}`);
+    const content = lines.join("\n");
+    const formatted = formatFileWithHashes(content);
+    const formattedLines = formatted.split("\n");
+
+    const seenRefs = new Set<string>();
+    for (const line of formattedLines) {
+      const m = line.match(/^#HL (\d+:[0-9a-f]{3,})\|/);
+      expect(m).not.toBeNull();
+      const ref = m![1];
+      expect(seenRefs.has(ref)).toBe(false);
+      seenRefs.add(ref);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

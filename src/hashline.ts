@@ -418,6 +418,19 @@ export function formatFileWithHashes(
     }
   }
 
+  // Post-loop safety: if any hashes still collide at max length (extremely unlikely
+  // with FNV-1a at 32 bits), disambiguate by appending line index as hex suffix.
+  const finalSeen = new Map<string, number>(); // hash -> first index
+  for (let idx = 0; idx < lines.length; idx++) {
+    const existing = finalSeen.get(hashes[idx]);
+    if (existing !== undefined) {
+      // Collision at max hash length — append line index as suffix to disambiguate
+      hashes[idx] = `${hashes[idx]}${idx.toString(16)}`;
+    } else {
+      finalSeen.set(hashes[idx], idx);
+    }
+  }
+
   const annotatedLines = lines.map((line, idx) => {
     return `${effectivePrefix}${idx + 1}:${hashes[idx]}|${line}`;
   });
