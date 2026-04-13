@@ -432,9 +432,9 @@ export function formatFileWithHashes(
 
 /**
  * Cache for compiled strip-hash regex patterns.
- * Key: escaped prefix string, Value: compiled RegExp
+ * Key: escaped prefix string, Value: compiled RegExp pair
  */
-const stripRegexCache = new Map<string, RegExp>();
+const stripRegexCache = new Map<string, { hashLine: RegExp; rev: RegExp }>();
 
 /**
  * Strip hashline prefixes to recover original file content.
@@ -450,16 +450,17 @@ export function stripHashes(content: string, prefix?: string | false): string {
   const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : (prefix === false ? "" : prefix);
   const escapedPrefix = effectivePrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  // Use cached regex
-  let hashLinePattern = stripRegexCache.get(escapedPrefix);
-  if (!hashLinePattern) {
-    // Match hash prefix, optionally preceded by patch markers (+, -, space)
-    hashLinePattern = new RegExp(`^([+ \\-])?${escapedPrefix}\\d+:[0-9a-f]{2,8}\\|`);
-    stripRegexCache.set(escapedPrefix, hashLinePattern);
+  // Use cached regex pair (hashLine + rev)
+  let cached = stripRegexCache.get(escapedPrefix);
+  if (!cached) {
+    cached = {
+      hashLine: new RegExp(`^([+ \\-])?${escapedPrefix}\\d+:[0-9a-f]{2,8}\\|`),
+      rev: new RegExp(`^${escapedPrefix}REV:[0-9a-f]{8}$`),
+    };
+    stripRegexCache.set(escapedPrefix, cached);
   }
-
-  // Build regex to match REV header line: <prefix>REV:<8-hex>
-  const revPattern = new RegExp(`^${escapedPrefix}REV:[0-9a-f]{8}$`);
+  const hashLinePattern = cached.hashLine;
+  const revPattern = cached.rev;
 
   const lineEnding = detectLineEnding(content);
   const normalized = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
