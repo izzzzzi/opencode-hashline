@@ -28,18 +28,21 @@ const DEBUG_LOG = join(homedir(), ".config", "opencode", "hashline-debug.log");
 const MAX_PROCESSED_IDS = 10_000;
 
 /** Bounded Set that evicts oldest entries when capacity is reached */
-function createBoundedSet(maxSize: number): Set<string> {
-  const set = new Set<string>();
-  const originalAdd = set.add.bind(set);
-  set.add = (value: string) => {
-    if (set.size >= maxSize) {
-      // Delete the oldest entry (first inserted)
-      const first = set.values().next().value;
-      if (first !== undefined) set.delete(first);
+class BoundedSet<T> {
+  private set = new Set<T>();
+  constructor(private maxSize: number) {}
+
+  has(value: T): boolean {
+    return this.set.has(value);
+  }
+
+  add(value: T): void {
+    if (this.set.size >= this.maxSize) {
+      const first = this.set.values().next().value;
+      if (first !== undefined) this.set.delete(first);
     }
-    return originalAdd(value);
-  };
-  return set;
+    this.set.add(value);
+  }
 }
 
 let debugEnabled = false;
@@ -129,7 +132,7 @@ export function createFileReadAfterHook(
 
   // Deduplicate by callID — batch tool may fire the hook multiple times
   // for the same child operation (see opencode-wakatime for reference)
-  const processedCallIds = createBoundedSet(MAX_PROCESSED_IDS);
+  const processedCallIds = new BoundedSet<string>(MAX_PROCESSED_IDS);
 
   return async (input, output) => {
     debug("tool.execute.after:", input.tool, "args:", input.args);
@@ -208,7 +211,7 @@ export function createFileEditBeforeHook(
   const prefix = resolved.prefix;
 
   // Deduplicate by callID — batch tool may fire the hook multiple times
-  const processedCallIds = createBoundedSet(MAX_PROCESSED_IDS);
+  const processedCallIds = new BoundedSet<string>(MAX_PROCESSED_IDS);
 
   return async (input, output) => {
     // Deduplicate: skip if this callID was already processed
