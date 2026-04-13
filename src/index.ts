@@ -146,6 +146,11 @@ function loadConfig(
   };
 }
 
+interface PluginInput {
+  directory?: string;
+  worktree?: string;
+}
+
 /**
  * Create a Hashline plugin instance with optional user configuration.
  *
@@ -170,8 +175,7 @@ function loadConfig(
  */
 export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
   return async (input) => {
-    const projectDir = (input as Record<string, unknown>).directory as string | undefined;
-    const worktree = (input as Record<string, unknown>).worktree as string | undefined;
+    const { directory: projectDir, worktree } = input as PluginInput;
     const fileConfig = loadConfig(projectDir, userConfig);
     const config = resolveConfig(fileConfig);
     const cache = new HashlineCache(config.cacheSize);
