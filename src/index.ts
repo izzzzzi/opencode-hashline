@@ -10,7 +10,7 @@
  * constants, import from "opencode-hashline/utils".
  */
 
-import { readFileSync, realpathSync, writeFileSync, mkdtempSync, openSync, closeSync, rmSync, constants as fsConstants } from "fs";
+import { readFileSync, realpathSync, writeFileSync, appendFileSync, mkdtempSync, openSync, closeSync, rmSync, constants as fsConstants } from "fs";
 import { join, resolve, sep } from "path";
 import { homedir, tmpdir } from "os";
 import { randomBytes } from "crypto";
@@ -178,8 +178,8 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
 
     // Enable debug logging only if config.debug is true
     setDebug(config.debug);
-    const { appendFileSync: writeLog } = await import("fs");
     const debugLog = join(homedir(), ".config", "opencode", "hashline-debug.log");
+    const writeLog = appendFileSync;
     if (config.debug) {
       try { writeLog(debugLog, `[${new Date().toISOString()}] plugin loaded, prefix: ${JSON.stringify(config.prefix)}, maxFileSize: ${config.maxFileSize}, projectDir: ${projectDir}\n`); } catch {}
     }
