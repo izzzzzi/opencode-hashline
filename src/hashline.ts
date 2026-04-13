@@ -803,11 +803,12 @@ export function replaceRange(
   content: string,
   replacement: string,
   hashLen?: number,
+  safeReapply?: boolean,
 ): string {
   const lineEnding = detectLineEnding(content);
   const normalized = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
   // resolveRange already splits once internally
-  const range = resolveRange(startRef, endRef, normalized, hashLen);
+  const range = resolveRange(startRef, endRef, normalized, hashLen, safeReapply);
   const lines = normalized.split("\n");
   const before = lines.slice(0, range.startLine - 1);
   const after = lines.slice(range.endLine);

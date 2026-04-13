@@ -638,6 +638,18 @@ describe("replaceRange", () => {
 
     expect(result).toBe("line one\n\nline four");
   });
+
+  it("supports safeReapply — relocates lines that moved", () => {
+    // "line two" was originally at line 2 (index 1), hash computed at index 1
+    const h2 = computeLineHash(1, "line two");
+    // Now "line two" moved to line 3 because a new line was inserted at top
+    const shiftedContent = "new first\nline one\nline two\nline three\nline four";
+
+    // Without safeReapply this would fail (hash mismatch at line 2)
+    // With safeReapply it should find "line two" at line 3
+    const result = replaceRange(`2:${h2}`, `2:${h2}`, shiftedContent, "replaced line", undefined, true);
+    expect(result).toBe("new first\nline one\nreplaced line\nline three\nline four");
+  });
 });
 
 // ---------------------------------------------------------------------------
