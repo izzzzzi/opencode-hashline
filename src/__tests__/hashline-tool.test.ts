@@ -192,4 +192,43 @@ describe("createHashlineEditTool", () => {
       expect(msg).toContain("Expected hash:");
     }
   });
+
+  it("blocks access to files outside project directory", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "hashline-tool-test-"));
+    const toolDef = createHashlineEditTool(resolveConfig());
+    const context = makeContext(dir);
+
+    await expect(
+      toolDef.execute(
+        {
+          path: "/etc/passwd",
+          operation: "replace",
+          startRef: "1:abc",
+          replacement: "x",
+        },
+        context as Parameters<typeof toolDef.execute>[1],
+      ),
+    ).rejects.toThrow("Access denied");
+  });
+
+  it("blocks path traversal via ../", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "hashline-tool-test-"));
+    const filePath = join(dir, "legit.ts");
+    writeFileSync(filePath, "content", "utf-8");
+
+    const toolDef = createHashlineEditTool(resolveConfig());
+    const context = makeContext(dir);
+
+    await expect(
+      toolDef.execute(
+        {
+          path: "../../../etc/passwd",
+          operation: "replace",
+          startRef: "1:abc",
+          replacement: "x",
+        },
+        context as Parameters<typeof toolDef.execute>[1],
+      ),
+    ).rejects.toThrow("Access denied");
+  });
 });
