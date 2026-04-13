@@ -1,3 +1,10 @@
+## [1.3.3](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.2...v1.3.3) (2026-04-13)
+
+
+### Bug Fixes
+
+* pin zod to ~4.1.8 to match @opencode-ai/plugin type expectations ([26d6817](https://github.com/izzzzzi/opencode-hashline/commit/26d6817bb3806982accd8e238e23b6bb3206419c))
+
 ## [1.3.2](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.1...v1.3.2) (2026-04-13)
 
 
