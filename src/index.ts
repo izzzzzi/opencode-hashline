@@ -73,9 +73,9 @@ function sanitizeConfig(raw: unknown): HashlineConfig {
   const result: HashlineConfig = {};
 
   if (Array.isArray(r.exclude)) {
-    result.exclude = r.exclude.filter(
-      (p): p is string => typeof p === "string" && p.length <= 512,
-    );
+    result.exclude = r.exclude
+      .filter((p): p is string => typeof p === "string" && p.length <= 512)
+      .slice(0, 1000);
   }
   if (typeof r.maxFileSize === "number" && Number.isFinite(r.maxFileSize) && r.maxFileSize >= 0) {
     result.maxFileSize = r.maxFileSize;
