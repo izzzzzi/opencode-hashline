@@ -144,6 +144,8 @@ export function createFileReadAfterHook(
         return;
       }
       processedCallIds.add(input.callID);
+    } else {
+      debug("no callID — deduplication disabled for this call");
     }
 
     // Only process file-read tools (fix #5: filter by tool name)
@@ -217,9 +219,12 @@ export function createFileEditBeforeHook(
     // Deduplicate: skip if this callID was already processed
     if (input.callID) {
       if (processedCallIds.has(input.callID)) {
+        debug("skipped: duplicate callID (edit)", input.callID);
         return;
       }
       processedCallIds.add(input.callID);
+    } else {
+      debug("no callID — deduplication disabled for this edit call");
     }
 
     const toolName = input.tool.toLowerCase();
