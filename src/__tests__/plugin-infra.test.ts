@@ -145,17 +145,12 @@ describe("temp file infrastructure", () => {
     expect(files.length).toBe(100);
   });
 
-  it("writeTempFile refuses to follow symlinks (O_EXCL fails on existing target)", () => {
+  it("O_EXCL fails when target file already exists", () => {
     if (process.platform === "win32") return;
 
     const dir = mkdtempSync(join(tmpdir(), "hashline-test-"));
     createdDirs.push(dir);
 
-    // Create a real file, then a symlink pointing to it
-    const realFile = join(dir, "real.txt");
-    writeFileSync(realFile, "original", "utf-8");
-
-    // O_EXCL with a pre-existing name should fail — verify the pattern works
     const existingName = join(dir, "existing.txt");
     writeFileSync(existingName, "data", "utf-8");
 

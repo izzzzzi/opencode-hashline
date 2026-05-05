@@ -145,7 +145,7 @@ const isExcluded = hl.shouldExclude("node_modules/foo.js"); // true
 | Параметр | Тип | По умолчанию | Описание |
 |----------|-----|:------------:|----------|
 | `exclude` | `string[]` | См. ниже | Glob-паттерны для исключения файлов |
-| `maxFileSize` | `number` | `1_048_576` (1 МБ) | Макс. размер файла в байтах |
+| `maxFileSize` | `number` | `1_048_576` (1 МиБ) | Макс. размер файла в байтах |
 | `hashLength` | `number \| undefined` | `undefined` (адаптивно) | Принудительная длина хеша |
 | `cacheSize` | `number` | `100` | Макс. файлов в LRU-кеше |
 | `prefix` | `string \| false` | `"#HL "` | Префикс строки (`false` для отключения) |

@@ -195,7 +195,7 @@ const isExcluded = hl.shouldExclude("node_modules/foo.js"); // true
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `exclude` | `string[]` | See below | Glob patterns for files to skip |
-| `maxFileSize` | `number` | `1_048_576` (1 MB) | Max file size in bytes |
+| `maxFileSize` | `number` | `1_048_576` (1 MiB) | Max file size in bytes |
 | `hashLength` | `number \| undefined` | `undefined` (adaptive) | Force specific hash length |
 | `cacheSize` | `number` | `100` | Max files in LRU cache |
 | `prefix` | `string \| false` | `"#HL "` | Line prefix (`false` to disable) |
