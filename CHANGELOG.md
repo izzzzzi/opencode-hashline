@@ -1,3 +1,15 @@
+# [1.4.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.3...v1.4.0) (2026-05-05)
+
+
+### Bug Fixes
+
+* correct unit labels (MB → MiB) and misleading test name ([53e73e9](https://github.com/izzzzzi/opencode-hashline/commit/53e73e93991a6bb4b997fe801910c8eadafe0754))
+
+
+### Features
+
+* add developer toolchain (Biome, Husky, VS Code integration) ([7b27f8a](https://github.com/izzzzzi/opencode-hashline/commit/7b27f8afbdebe5830eea3eb0d147415695141d2b))
+
 ## [1.3.3](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.2...v1.3.3) (2026-04-13)
 
 
