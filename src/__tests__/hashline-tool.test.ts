@@ -1,9 +1,9 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
-import { describe, it, expect, vi } from "vitest";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import { computeFileRev, computeLineHash, HashlineCache, resolveConfig } from "../hashline";
 import { createHashlineEditTool } from "../hashline-tool";
-import { computeLineHash, computeFileRev, HashlineCache, resolveConfig } from "../hashline";
 
 describe("createHashlineEditTool", () => {
   function makeContext(directory: string) {

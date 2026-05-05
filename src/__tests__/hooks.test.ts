@@ -1,19 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  createFileReadAfterHook,
+  computeLineHash,
+  formatFileWithHashes,
+  HashlineCache,
+  resolveConfig,
+  verifyHash,
+} from "../hashline";
+import {
   createFileEditBeforeHook,
+  createFileReadAfterHook,
   createSystemPromptHook,
   isFileReadTool,
 } from "../hooks";
-import {
-  formatFileWithHashes,
-  stripHashes,
-  HashlineCache,
-  resolveConfig,
-  computeLineHash,
-  verifyHash,
-  DEFAULT_PREFIX,
-} from "../hashline";
 
 // ---------------------------------------------------------------------------
 // Typed mock factories (issue #11 — remove `as any`)
@@ -219,7 +217,10 @@ describe("createFileReadAfterHook", () => {
     const input = createReadInput("read_file", { path: "package.lock" });
     const output = createReadOutput("lock content");
 
-    await hookWithExclude(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
+    await hookWithExclude(
+      input as Parameters<typeof hook>[0],
+      output as Parameters<typeof hook>[1],
+    );
 
     expect(output.output).toBe("lock content"); // unchanged
   });
@@ -334,7 +335,7 @@ describe("createFileEditBeforeHook", () => {
 
     await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
 
-    expect(output.args!.content).toBe(original);
+    expect(output.args?.content).toBe(original);
   });
 
   it("strips hashes from multiple content fields", async () => {
@@ -349,8 +350,8 @@ describe("createFileEditBeforeHook", () => {
 
     await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
 
-    expect(output.args!.old_string).toBe(original);
-    expect(output.args!.new_string).toBe(original);
+    expect(output.args?.old_string).toBe(original);
+    expect(output.args?.new_string).toBe(original);
   });
 
   it("handles all recognized file-edit tool names", async () => {
@@ -361,7 +362,7 @@ describe("createFileEditBeforeHook", () => {
       const input = createEditInput(tool);
       const output = createEditOutput({ content: hashed });
       await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
-      expect(output.args!.content).toBe("test");
+      expect(output.args?.content).toBe("test");
     }
   });
 
@@ -372,7 +373,7 @@ describe("createFileEditBeforeHook", () => {
 
     await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
 
-    expect(output.args!.content).toBe(hashed);
+    expect(output.args?.content).toBe(hashed);
   });
 
   it("does not crash when args is undefined", async () => {
@@ -380,7 +381,7 @@ describe("createFileEditBeforeHook", () => {
     const output = createEditOutput();
 
     await expect(
-      hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1])
+      hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]),
     ).resolves.toBeUndefined();
   });
 
@@ -389,7 +390,7 @@ describe("createFileEditBeforeHook", () => {
     const output = { args: "not an object" } as unknown as MockEditOutput;
 
     await expect(
-      hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1])
+      hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]),
     ).resolves.toBeUndefined();
   });
 
@@ -399,8 +400,8 @@ describe("createFileEditBeforeHook", () => {
 
     await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
 
-    expect(output.args!.content).toBe(42);
-    expect(output.args!.path).toBe("/some/file");
+    expect(output.args?.content).toBe(42);
+    expect(output.args?.path).toBe("/some/file");
   });
 
   it("strips hashes with configured prefix", async () => {
@@ -415,7 +416,7 @@ describe("createFileEditBeforeHook", () => {
 
     await customHook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
 
-    expect(output.args!.content).toBe(original);
+    expect(output.args?.content).toBe(original);
   });
 });
 
@@ -537,7 +538,7 @@ describe("Integration: full plugin cycle", () => {
     expect(readOutput.output).toContain("function hello()");
 
     // Step 2: AI decides to edit — includes hash prefixes in its edit
-    const annotatedContent = readOutput.output!;
+    const annotatedContent = readOutput.output ?? "";
     const editInput = createEditInput("edit_file");
     const editOutput = createEditOutput({
       path: "src/hello.ts",
@@ -550,7 +551,7 @@ describe("Integration: full plugin cycle", () => {
     );
 
     // Hash prefixes should be stripped
-    expect(editOutput.args!.new_string).toBe(originalContent);
+    expect(editOutput.args?.new_string).toBe(originalContent);
 
     // Step 3: Verify hashes still match original content
     const lines = originalContent.split("\n");
@@ -648,14 +649,14 @@ describe("Integration: full plugin cycle", () => {
 
     // Strip should recover original
     const editInput = createEditInput("edit_file");
-    const editOutput = createEditOutput({ content: readOutput.output! });
+    const editOutput = createEditOutput({ content: readOutput.output ?? "" });
 
     await editHook(
       editInput as Parameters<typeof editHook>[0],
       editOutput as Parameters<typeof editHook>[1],
     );
 
-    expect(editOutput.args!.content).toBe(originalContent);
+    expect(editOutput.args?.content).toBe(originalContent);
   });
 });
 
@@ -673,7 +674,7 @@ describe("REV header in hooks", () => {
 
     await hook(input as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
 
-    const lines = output.output!.split("\n");
+    const lines = output.output?.split("\n");
     expect(lines[0]).toMatch(/^#HL REV:[0-9a-f]{8}$/);
     expect(lines[1]).toMatch(/^#HL 1:[0-9a-f]{3}\|line one$/);
   });
@@ -700,18 +701,24 @@ describe("REV header in hooks", () => {
     const readInput = createReadInput("read_file", { path: "rev.ts" });
     const readOutput = createReadOutput(original);
 
-    await readHook(readInput as Parameters<typeof readHook>[0], readOutput as Parameters<typeof readHook>[1]);
+    await readHook(
+      readInput as Parameters<typeof readHook>[0],
+      readOutput as Parameters<typeof readHook>[1],
+    );
 
     // Output should have REV header
-    expect(readOutput.output!.split("\n")[0]).toMatch(/^#HL REV:/);
+    expect(readOutput.output?.split("\n")[0]).toMatch(/^#HL REV:/);
 
     // Strip should recover original
     const editInput = createEditInput("edit_file");
-    const editOutput = createEditOutput({ content: readOutput.output! });
+    const editOutput = createEditOutput({ content: readOutput.output ?? "" });
 
-    await editHook(editInput as Parameters<typeof editHook>[0], editOutput as Parameters<typeof editHook>[1]);
+    await editHook(
+      editInput as Parameters<typeof editHook>[0],
+      editOutput as Parameters<typeof editHook>[1],
+    );
 
-    expect(editOutput.args!.content).toBe(original);
+    expect(editOutput.args?.content).toBe(original);
   });
 });
 

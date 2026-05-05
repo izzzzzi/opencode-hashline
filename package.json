@@ -26,8 +26,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --fix src/",
+    "format": "biome format --write src/",
     "benchmark": "npx tsx benchmarks/benchmark.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "husky"
   },
   "keywords": [
     "opencode",
@@ -44,11 +48,14 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
     "@opencode-ai/plugin": "^1.2.2",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/node": "^25.2.3",
     "@types/picomatch": "^4.0.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "semantic-release": "^25.0.3",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
@@ -57,6 +64,11 @@
   },
   "dependencies": {
     "picomatch": "^4.0.3"
+  },
+  "lint-staged": {
+    "*.{ts,js,json}": [
+      "biome check --fix --no-errors-on-unmatched"
+    ]
   },
   "release": {
     "branches": [

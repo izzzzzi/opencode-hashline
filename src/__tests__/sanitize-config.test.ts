@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { sanitizeConfig } from "../index";
 
 describe("sanitizeConfig", () => {
@@ -32,7 +32,7 @@ describe("sanitizeConfig", () => {
   it("limits exclude to 1000 entries", () => {
     const patterns = Array.from({ length: 2000 }, (_, i) => `pattern-${i}`);
     const result = sanitizeConfig({ exclude: patterns });
-    expect(result.exclude!.length).toBe(1000);
+    expect(result.exclude?.length).toBe(1000);
   });
 
   it("accepts valid maxFileSize", () => {

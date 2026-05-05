@@ -1,8 +1,15 @@
-import { readFileSync, realpathSync, writeFileSync } from "fs";
-import { dirname, isAbsolute, relative, resolve, sep } from "path";
-import { z } from "zod";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { ToolContext } from "@opencode-ai/plugin";
-import { applyHashEdit, getByteLength, HashlineError, type HashlineCache, type HashlineConfig, type HashEditOperation } from "./hashline";
+import { z } from "zod";
+import {
+  applyHashEdit,
+  getByteLength,
+  type HashEditOperation,
+  type HashlineCache,
+  type HashlineConfig,
+  HashlineError,
+} from "./hashline";
 
 /**
  * Hash-aware edit tool.
@@ -10,10 +17,7 @@ import { applyHashEdit, getByteLength, HashlineError, type HashlineCache, type H
  * Applies edits by hash references (line+hash), avoiding fragile exact
  * old_string matching used by traditional str_replace flows.
  */
-export function createHashlineEditTool(
-  config: Required<HashlineConfig>,
-  cache?: HashlineCache,
-) {
+export function createHashlineEditTool(config: Required<HashlineConfig>, cache?: HashlineCache) {
   return {
     description:
       "Edit files using hashline references. Resolves refs like 5:a3f or '#HL 5:a3f|...' and applies replace/delete/insert without old_string matching.",
@@ -28,7 +32,7 @@ export function createHashlineEditTool(
       endRef: z
         .string()
         .optional()
-        .describe('End hash reference for range operations. Defaults to startRef when omitted.'),
+        .describe("End hash reference for range operations. Defaults to startRef when omitted."),
       replacement: z
         .string()
         .max(10_000_000)
@@ -37,11 +41,15 @@ export function createHashlineEditTool(
       fileRev: z
         .string()
         .optional()
-        .describe("File revision hash (8-char hex from #HL REV:<hash>). When provided, verifies the file hasn't changed before editing."),
+        .describe(
+          "File revision hash (8-char hex from #HL REV:<hash>). When provided, verifies the file hasn't changed before editing.",
+        ),
       safeReapply: z
         .boolean()
         .optional()
-        .describe("Enable safe reapply: if a line moved, attempt to find it by content hash. Fails on ambiguous matches."),
+        .describe(
+          "Enable safe reapply: if a line moved, attempt to find it by content hash. Fails on ambiguous matches.",
+        ),
     },
     async execute(args: Record<string, unknown>, context: ToolContext) {
       const { path, operation, startRef, endRef, replacement, fileRev, safeReapply } = args as {

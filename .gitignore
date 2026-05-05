@@ -8,7 +8,6 @@ external/
 docs/superpowers/
 
 # IDE
-.vscode/
 .idea/
 
 # Debug logs
