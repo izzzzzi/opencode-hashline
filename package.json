@@ -65,6 +65,11 @@
   "dependencies": {
     "picomatch": "^4.0.3"
   },
+  "lint-staged": {
+    "*.{ts,js,json}": [
+      "biome check --fix --no-errors-on-unmatched"
+    ]
+  },
   "release": {
     "branches": [
       "main"
