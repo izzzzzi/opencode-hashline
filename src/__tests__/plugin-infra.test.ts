@@ -1,8 +1,18 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, openSync, closeSync, writeFileSync, existsSync, statSync, readdirSync, rmSync, constants as fsConstants } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
-import { randomBytes } from "crypto";
+import { randomBytes } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  constants as fsConstants,
+  mkdtempSync,
+  openSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // These tests verify the temp-file infrastructure patterns used in index.ts:
@@ -15,7 +25,11 @@ import { randomBytes } from "crypto";
 function writeTempFile(tempDir: string, content: string): string {
   const name = `hl-${randomBytes(16).toString("hex")}.txt`;
   const tmpPath = join(tempDir, name);
-  const fd = openSync(tmpPath, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL, 0o600);
+  const fd = openSync(
+    tmpPath,
+    fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL,
+    0o600,
+  );
   try {
     writeFileSync(fd, content, "utf-8");
   } finally {
@@ -50,7 +64,9 @@ describe("temp file infrastructure", () => {
 
   afterEach(() => {
     for (const d of createdDirs) {
-      try { rmSync(d, { recursive: true, force: true }); } catch {}
+      try {
+        rmSync(d, { recursive: true, force: true });
+      } catch {}
     }
     createdDirs.length = 0;
   });
@@ -97,7 +113,7 @@ describe("temp file infrastructure", () => {
     expect(existsSync(path)).toBe(true);
 
     // Verify content
-    const { readFileSync } = require("fs");
+    const { readFileSync } = require("node:fs");
     expect(readFileSync(path, "utf-8")).toBe("hello world");
   });
 
@@ -144,7 +160,11 @@ describe("temp file infrastructure", () => {
     writeFileSync(existingName, "data", "utf-8");
 
     expect(() => {
-      openSync(existingName, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL, 0o600);
+      openSync(
+        existingName,
+        fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL,
+        0o600,
+      );
     }).toThrow();
   });
 

@@ -10,20 +10,30 @@
  * constants, import from "opencode-hashline/utils".
  */
 
-import { readFileSync, realpathSync, writeFileSync, appendFileSync, mkdtempSync, openSync, closeSync, rmSync, constants as fsConstants } from "fs";
-import { join, resolve, sep } from "path";
-import { homedir, tmpdir } from "os";
-import { randomBytes } from "crypto";
-import { fileURLToPath } from "url";
-import type { Plugin } from "@opencode-ai/plugin";
+import { randomBytes } from "node:crypto";
 import {
-  createFileReadAfterHook,
+  appendFileSync,
+  closeSync,
+  constants as fsConstants,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { Plugin } from "@opencode-ai/plugin";
+import { HashlineCache, type HashlineConfig, resolveConfig } from "./hashline";
+import { createHashlineEditTool } from "./hashline-tool";
+import {
   createFileEditBeforeHook,
+  createFileReadAfterHook,
   createSystemPromptHook,
   setDebug,
 } from "./hooks";
-import { HashlineCache, resolveConfig, type HashlineConfig } from "./hashline";
-import { createHashlineEditTool } from "./hashline-tool";
 
 const CONFIG_FILENAME = "opencode-hashline.json";
 
@@ -38,7 +48,9 @@ function registerTempDir(dir: string): void {
     exitListenerRegistered = true;
     process.on("exit", () => {
       for (const d of tempDirs) {
-        try { rmSync(d, { recursive: true, force: true }); } catch {}
+        try {
+          rmSync(d, { recursive: true, force: true });
+        } catch {}
       }
     });
   }
@@ -52,7 +64,11 @@ function writeTempFile(tempDir: string, content: string): string {
   const name = `hl-${randomBytes(16).toString("hex")}.txt`;
   const tmpPath = join(tempDir, name);
   // O_WRONLY | O_CREAT | O_EXCL — fails if file already exists (atomic creation)
-  const fd = openSync(tmpPath, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL, 0o600);
+  const fd = openSync(
+    tmpPath,
+    fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL,
+    0o600,
+  );
   try {
     writeFileSync(fd, content, "utf-8");
   } finally {
@@ -127,10 +143,7 @@ function loadConfigFile(filePath: string): HashlineConfig | undefined {
  *   2. <project>/opencode-hashline.json           (project-local)
  *   3. programmatic userConfig                     (factory arg)
  */
-function loadConfig(
-  projectDir?: string,
-  userConfig?: HashlineConfig,
-): HashlineConfig {
+function loadConfig(projectDir?: string, userConfig?: HashlineConfig): HashlineConfig {
   const globalPath = join(homedir(), ".config", "opencode", CONFIG_FILENAME);
   const globalConfig = loadConfigFile(globalPath);
 
@@ -185,7 +198,12 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
     const debugLog = join(homedir(), ".config", "opencode", "hashline-debug.log");
     const writeLog = appendFileSync;
     if (config.debug) {
-      try { writeLog(debugLog, `[${new Date().toISOString()}] plugin loaded, prefix: ${JSON.stringify(config.prefix)}, maxFileSize: ${config.maxFileSize}, projectDir: ${projectDir}\n`); } catch {}
+      try {
+        writeLog(
+          debugLog,
+          `[${new Date().toISOString()}] plugin loaded, prefix: ${JSON.stringify(config.prefix)}, maxFileSize: ${config.maxFileSize}, projectDir: ${projectDir}\n`,
+        );
+      } catch {}
     }
 
     // Create a private temp directory for this instance; cleaned up on process exit.
@@ -201,7 +219,10 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
       "experimental.chat.system.transform": createSystemPromptHook(config),
       "chat.message": async (_input: unknown, output: unknown) => {
         try {
-          const out = output as { message?: unknown; parts?: any[] };
+          const out = output as {
+            message?: unknown;
+            parts?: { type?: string; url?: string; mime?: string }[];
+          };
           const hashLen = config.hashLength || 0;
           const prefix = config.prefix;
           const { formatFileWithHashes, shouldExclude, getByteLength } = await import("./hashline");
@@ -237,7 +258,9 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
             let content: string;
             try {
               content = readFileSync(filePath, "utf-8");
-            } catch { continue; }
+            } catch {
+              continue;
+            }
 
             if (config.maxFileSize > 0 && getByteLength(content) > config.maxFileSize) continue;
 
@@ -247,22 +270,45 @@ export function createHashlinePlugin(userConfig?: HashlineConfig): Plugin {
               // Write annotated content to temp file and swap URL
               const tmpPath = writeTempFile(instanceTmpDir, cached);
               p.url = `file://${tmpPath}`;
-              if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated (cached): ${filePath}\n`); } catch {} }
+              if (config.debug) {
+                try {
+                  writeLog(
+                    debugLog,
+                    `[${new Date().toISOString()}] chat.message annotated (cached): ${filePath}\n`,
+                  );
+                } catch {}
+              }
               continue;
             }
 
             // Annotate
-            const annotated = formatFileWithHashes(content, hashLen || undefined, prefix, config.fileRev);
+            const annotated = formatFileWithHashes(
+              content,
+              hashLen || undefined,
+              prefix,
+              config.fileRev,
+            );
             cache.set(filePath, content, annotated);
 
             // Write to temp file and swap URL
             const tmpPath = writeTempFile(instanceTmpDir, annotated);
             p.url = `file://${tmpPath}`;
 
-            if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message annotated: ${filePath} lines=${content.split("\n").length}\n`); } catch {} }
+            if (config.debug) {
+              try {
+                writeLog(
+                  debugLog,
+                  `[${new Date().toISOString()}] chat.message annotated: ${filePath} lines=${content.split("\n").length}\n`,
+                );
+              } catch {}
+            }
           }
         } catch (e) {
-          if (config.debug) { try { writeLog(debugLog, `[${new Date().toISOString()}] chat.message error: ${e}\n`); } catch {} }
+          if (config.debug) {
+            try {
+              writeLog(debugLog, `[${new Date().toISOString()}] chat.message error: ${e}\n`);
+            } catch {}
+          }
         }
       },
     };
@@ -283,13 +329,13 @@ export default HashlinePlugin;
 // Re-export types only (types are erased at runtime, so they don't
 // create callable exports that would confuse OpenCode's plugin loader)
 export type {
-  HashlineConfig,
-  HashlineInstance,
-  VerifyHashResult,
-  ResolvedRange,
+  CandidateLine,
   HashEditInput,
   HashEditOperation,
   HashEditResult,
+  HashlineConfig,
   HashlineErrorCode,
-  CandidateLine,
+  HashlineInstance,
+  ResolvedRange,
+  VerifyHashResult,
 } from "./hashline";

@@ -7,19 +7,18 @@
  *   before they are applied to the actual file.
  */
 
-import { appendFileSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
+import { appendFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { Hooks } from "@opencode-ai/plugin";
 import {
   formatFileWithHashes,
-  stripHashes,
-  HashlineCache,
-  shouldExclude,
   getByteLength,
-  DEFAULT_PREFIX,
+  type HashlineCache,
   type HashlineConfig,
   resolveConfig,
+  shouldExclude,
+  stripHashes,
 } from "./hashline";
 
 const DEBUG_LOG = join(homedir(), ".config", "opencode", "hashline-debug.log");
@@ -54,13 +53,25 @@ export function setDebug(enabled: boolean) {
 
 function debug(...args: unknown[]) {
   if (!debugEnabled) return;
-  const line = `[${new Date().toISOString()}] ${args.map(a => typeof a === "string" ? a : JSON.stringify(a)).join(" ")}\n`;
-  try { appendFileSync(DEBUG_LOG, line); } catch {}
+  const line = `[${new Date().toISOString()}] ${args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ")}\n`;
+  try {
+    appendFileSync(DEBUG_LOG, line);
+  } catch {}
 }
 
 /** Tool names used by OpenCode for file operations */
 const FILE_READ_TOOLS = ["read", "file_read", "read_file", "cat", "view"];
-const FILE_EDIT_TOOLS = ["write", "file_write", "file_edit", "edit", "edit_file", "patch", "apply_patch", "multiedit", "batch"];
+const FILE_EDIT_TOOLS = [
+  "write",
+  "file_write",
+  "file_edit",
+  "edit",
+  "edit_file",
+  "patch",
+  "apply_patch",
+  "multiedit",
+  "batch",
+];
 
 /**
  * Check if a tool input looks like a file-reading tool.
@@ -93,18 +104,29 @@ const FILE_EDIT_TOOLS = ["write", "file_write", "file_edit", "edit", "edit_file"
  */
 export function isFileReadTool(toolName: string, args?: Record<string, unknown>): boolean {
   const lower = toolName.toLowerCase();
-  const nameMatch = FILE_READ_TOOLS.some(
-    (name) => lower === name || lower.endsWith(`.${name}`),
-  );
+  const nameMatch = FILE_READ_TOOLS.some((name) => lower === name || lower.endsWith(`.${name}`));
   if (nameMatch) return true;
 
   // Fallback heuristic: match tools that have path/filePath args but don't
   // look like write/execute tools. This covers custom MCP tools that read
   // files but aren't in our explicit allow-list.
   if (args && typeof args === "object") {
-    if (typeof args.path === "string" || typeof args.filePath === "string" || typeof args.file === "string") {
+    if (
+      typeof args.path === "string" ||
+      typeof args.filePath === "string" ||
+      typeof args.file === "string"
+    ) {
       // Only if the tool name suggests reading (not writing/executing)
-      const writeIndicators = ["write", "edit", "patch", "execute", "run", "command", "shell", "bash"];
+      const writeIndicators = [
+        "write",
+        "edit",
+        "patch",
+        "execute",
+        "run",
+        "command",
+        "shell",
+        "bash",
+      ];
       const isWrite = writeIndicators.some((w) => lower.includes(w));
       if (!isWrite) return true;
     }
@@ -188,7 +210,12 @@ export function createFileReadAfterHook(
     // Annotate the file content with hashline prefixes
     const annotated = formatFileWithHashes(content, hashLen || undefined, prefix, resolved.fileRev);
     output.output = annotated;
-    debug("annotated", typeof filePath === "string" ? filePath : input.tool, "lines:", content.split("\n").length);
+    debug(
+      "annotated",
+      typeof filePath === "string" ? filePath : input.tool,
+      "lines:",
+      content.split("\n").length,
+    );
 
     // Store in cache if available
     if (cache && typeof filePath === "string") {
@@ -231,7 +258,7 @@ export function createFileEditBeforeHook(
 
     // Only process file-edit tools
     const isFileEdit = FILE_EDIT_TOOLS.some(
-      (name) => toolName === name || toolName.endsWith(`.${name}`)
+      (name) => toolName === name || toolName.endsWith(`.${name}`),
     );
     if (!isFileEdit) return;
 
@@ -321,27 +348,29 @@ export function createSystemPromptHook(
         "- This avoids fragile old_string matching because edits are resolved by hash references.",
         "",
         "**Replace a single line:**",
-        '- \"Replace line 2:f1c\" — target a specific line unambiguously',
+        '- "Replace line 2:f1c" — target a specific line unambiguously',
         "",
         "**Replace a block of lines:**",
-        '- \"Replace block from 1:a3f to 3:0e7\" — replace a range of lines',
+        '- "Replace block from 1:a3f to 3:0e7" — replace a range of lines',
         "- Example: replace lines 1:a3f through 3:0e7 with new content",
         "",
         "**Insert content:**",
-        '- \"Insert after 3:0e7\" — insert new lines after a specific line',
-        '- \"Insert before 1:a3f\" — insert new lines before a specific line',
+        '- "Insert after 3:0e7" — insert new lines after a specific line',
+        '- "Insert before 1:a3f" — insert new lines before a specific line',
         "",
         "**Delete lines:**",
-        '- \"Delete lines from 2:f1c to 3:0e7\" — remove a range of lines',
+        '- "Delete lines from 2:f1c to 3:0e7" — remove a range of lines',
         "",
         "### Hash verification rules:",
         "- **Always verify** that the hash reference matches the current line content before editing.",
         "- If a hash doesn't match, the file may have changed since you last read it — re-read the file first.",
-        "- Hash references include both the line number AND the content hash, so `2:f1c` means \"line 2 with hash f1c\".",
+        '- Hash references include both the line number AND the content hash, so `2:f1c` means "line 2 with hash f1c".',
         "- If you see a mismatch, do NOT proceed with the edit — re-read the file to get fresh references.",
         "",
         "### File revision (`#HL REV:<hash>`):",
-        "- When files are read, the first line may contain a file revision header: `" + prefix + "REV:<8-char-hex>`.",
+        "- When files are read, the first line may contain a file revision header: `" +
+          prefix +
+          "REV:<8-char-hex>`.",
         "- This is a hash of the entire file content. Pass it as the `fileRev` parameter to `hashline_edit` to verify the file hasn't changed.",
         "- If the file was modified between read and edit, the revision check fails with `FILE_REV_MISMATCH` — re-read the file.",
         "",
@@ -366,7 +395,7 @@ export function createSystemPromptHook(
         "- For large replacements, use range references (e.g., `1:a3f to 10:b2c`) instead of individual lines.",
         "- Use `fileRev` to guard against stale edits on critical files.",
         "- Use `safeReapply: true` when editing files that may have shifted due to earlier edits.",
-      ].join("\n")
+      ].join("\n"),
     );
   };
 }

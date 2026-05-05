@@ -8,52 +8,51 @@
  * because OpenCode's plugin loader calls every export as a Plugin function.
  */
 
-// Core utilities
-export {
-  computeLineHash,
-  formatFileWithHashes,
-  stripHashes,
-  parseHashRef,
-  buildHashMap,
-  getAdaptiveHashLength,
-  verifyHash,
-  resolveRange,
-  replaceRange,
-  applyHashEdit,
-  normalizeHashRef,
-  HashlineCache,
-  createHashline,
-  shouldExclude,
-  matchesGlob,
-  resolveConfig,
-  getByteLength,
-  DEFAULT_CONFIG,
-  DEFAULT_EXCLUDE_PATTERNS,
-  DEFAULT_PREFIX,
-  computeFileRev,
-  verifyFileRev,
-  extractFileRev,
-  findCandidateLines,
-  HashlineError,
-} from "./hashline";
-
 // Types
 export type {
-  HashlineConfig,
-  HashlineInstance,
-  VerifyHashResult,
-  ResolvedRange,
+  CandidateLine,
   HashEditInput,
   HashEditOperation,
   HashEditResult,
+  HashlineConfig,
   HashlineErrorCode,
-  CandidateLine,
+  HashlineInstance,
+  ResolvedRange,
+  VerifyHashResult,
+} from "./hashline";
+// Core utilities
+export {
+  applyHashEdit,
+  buildHashMap,
+  computeFileRev,
+  computeLineHash,
+  createHashline,
+  DEFAULT_CONFIG,
+  DEFAULT_EXCLUDE_PATTERNS,
+  DEFAULT_PREFIX,
+  extractFileRev,
+  findCandidateLines,
+  formatFileWithHashes,
+  getAdaptiveHashLength,
+  getByteLength,
+  HashlineCache,
+  HashlineError,
+  matchesGlob,
+  normalizeHashRef,
+  parseHashRef,
+  replaceRange,
+  resolveConfig,
+  resolveRange,
+  shouldExclude,
+  stripHashes,
+  verifyFileRev,
+  verifyHash,
 } from "./hashline";
 
 // Hooks
 export {
-  createFileReadAfterHook,
   createFileEditBeforeHook,
+  createFileReadAfterHook,
   createSystemPromptHook,
   isFileReadTool,
 } from "./hooks";

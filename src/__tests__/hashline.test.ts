@@ -1,30 +1,29 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  computeLineHash,
-  formatFileWithHashes,
-  stripHashes,
-  parseHashRef,
-  buildHashMap,
-  getAdaptiveHashLength,
-  verifyHash,
-  resolveRange,
-  replaceRange,
   applyHashEdit,
-  normalizeHashRef,
-  HashlineCache,
-  createHashline,
-  shouldExclude,
-  matchesGlob,
-  resolveConfig,
-  getByteLength,
-  detectLineEnding,
+  buildHashMap,
   computeFileRev,
-  verifyFileRev,
+  computeLineHash,
+  createHashline,
+  DEFAULT_PREFIX,
+  detectLineEnding,
   extractFileRev,
   findCandidateLines,
+  formatFileWithHashes,
+  getAdaptiveHashLength,
+  getByteLength,
+  HashlineCache,
   HashlineError,
-  DEFAULT_CONFIG,
-  DEFAULT_PREFIX,
+  matchesGlob,
+  normalizeHashRef,
+  parseHashRef,
+  replaceRange,
+  resolveConfig,
+  resolveRange,
+  shouldExclude,
+  stripHashes,
+  verifyFileRev,
+  verifyHash,
 } from "../hashline";
 
 // ---------------------------------------------------------------------------
@@ -109,7 +108,7 @@ describe("getAdaptiveHashLength", () => {
 
 describe("formatFileWithHashes", () => {
   it("annotates each line with prefix, line number and hash", () => {
-    const content = "function hello() {\n  return \"world\";\n}";
+    const content = 'function hello() {\n  return "world";\n}';
     const formatted = formatFileWithHashes(content);
     const lines = formatted.split("\n");
 
@@ -215,7 +214,7 @@ describe("formatFileWithHashes", () => {
     for (const line of formattedLines) {
       const m = line.match(/^#HL (\d+:[0-9a-f]{3,})\|/);
       expect(m).not.toBeNull();
-      const ref = m![1];
+      const ref = m?.[1];
       expect(seenHashes.has(ref)).toBe(false);
       seenHashes.add(ref);
     }
@@ -233,7 +232,7 @@ describe("formatFileWithHashes", () => {
     for (const line of formattedLines) {
       const m = line.match(/^#HL (\d+:[0-9a-f]{3,})\|/);
       expect(m).not.toBeNull();
-      const ref = m![1];
+      const ref = m?.[1];
       expect(seenHashes.has(ref)).toBe(false);
       seenHashes.add(ref);
     }
@@ -249,7 +248,7 @@ describe("formatFileWithHashes", () => {
     for (const line of formattedLines) {
       const m = line.match(/^#HL (\d+:[0-9a-f]{3,})\|/);
       expect(m).not.toBeNull();
-      const ref = m![1];
+      const ref = m?.[1];
       expect(seenRefs.has(ref)).toBe(false);
       seenRefs.add(ref);
     }
@@ -262,7 +261,7 @@ describe("formatFileWithHashes", () => {
 
 describe("stripHashes", () => {
   it("removes hash prefixes to recover original content", () => {
-    const original = "function hello() {\n  return \"world\";\n}";
+    const original = 'function hello() {\n  return "world";\n}';
     const formatted = formatFileWithHashes(original);
     const stripped = stripHashes(formatted);
     expect(stripped).toBe(original);
@@ -340,13 +339,15 @@ describe("stripHashes", () => {
       "*** End Patch",
     ].join("\n");
     const stripped = stripHashes(patchContent);
-    expect(stripped).toBe([
-      "+const x = 1;",
-      "-const y = 2;",
-      " const z = 3;",
-      "+plain line without hash",
-      "*** End Patch",
-    ].join("\n"));
+    expect(stripped).toBe(
+      [
+        "+const x = 1;",
+        "-const y = 2;",
+        " const z = 3;",
+        "+plain line without hash",
+        "*** End Patch",
+      ].join("\n"),
+    );
   });
 
   it("preserves patch markers when stripping hashes with custom prefix", () => {
@@ -426,7 +427,7 @@ describe("normalizeHashRef", () => {
 
 describe("buildHashMap", () => {
   it("builds a map from hash refs to line numbers", () => {
-    const content = "function hello() {\n  return \"world\";\n}";
+    const content = 'function hello() {\n  return "world";\n}';
     const map = buildHashMap(content);
 
     expect(map.size).toBe(3);
@@ -509,7 +510,7 @@ describe("verifyHash", () => {
   });
 
   it("detects content changes (race condition protection)", () => {
-    const originalContent = "line one\nline two\nline three";
+    const _originalContent = "line one\nline two\nline three";
     const hash = computeLineHash(1, "line two");
 
     // Content changed
@@ -522,7 +523,7 @@ describe("verifyHash", () => {
 
   it("uses hash.length from ref, not adaptive length from file size", () => {
     // Create a small file
-    const smallContent = "line one\nline two\nline three";
+    const _smallContent = "line one\nline two\nline three";
     const hash3 = computeLineHash(0, "line one", 3); // 3-char hash
 
     // Now imagine the file grew to >4096 lines — adaptive would give 4-char hashes
@@ -537,7 +538,7 @@ describe("verifyHash", () => {
   });
 
   it("detects indentation changes (trimEnd instead of trim)", () => {
-    const content1 = "  indented line\nline two";
+    const _content1 = "  indented line\nline two";
     const hash = computeLineHash(0, "  indented line");
 
     // Change indentation
@@ -647,7 +648,14 @@ describe("replaceRange", () => {
 
     // Without safeReapply this would fail (hash mismatch at line 2)
     // With safeReapply it should find "line two" at line 3
-    const result = replaceRange(`2:${h2}`, `2:${h2}`, shiftedContent, "replaced line", undefined, true);
+    const result = replaceRange(
+      `2:${h2}`,
+      `2:${h2}`,
+      shiftedContent,
+      "replaced line",
+      undefined,
+      true,
+    );
     expect(result).toBe("new first\nline one\nreplaced line\nline three\nline four");
   });
 });
@@ -928,10 +936,7 @@ describe("resolveConfig", () => {
   });
 
   it("merges pluginConfig with userConfig (userConfig takes priority)", () => {
-    const config = resolveConfig(
-      { cacheSize: 50 },
-      { cacheSize: 200, maxFileSize: 500_000 },
-    );
+    const config = resolveConfig({ cacheSize: 50 }, { cacheSize: 200, maxFileSize: 500_000 });
     expect(config.cacheSize).toBe(50); // userConfig wins
     expect(config.maxFileSize).toBe(500_000); // from pluginConfig
   });
@@ -1187,10 +1192,7 @@ describe("CRLF preservation", () => {
 
   it("applyHashEdit delete: preserves CRLF line endings in output", () => {
     const h2 = computeLineHash(1, "line two");
-    const result = applyHashEdit(
-      { operation: "delete", startRef: `2:${h2}` },
-      crlfContent,
-    );
+    const result = applyHashEdit({ operation: "delete", startRef: `2:${h2}` }, crlfContent);
     expect(result.content).toContain("\r\n");
     expect(result.content).not.toContain("line two");
   });

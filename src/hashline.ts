@@ -203,7 +203,7 @@ export class HashlineError extends Error {
     if (this.candidates && this.candidates.length > 0) {
       parts.push(`  Candidates (${this.candidates.length}):`);
       for (const c of this.candidates) {
-        const preview = c.content.length > 60 ? c.content.slice(0, 60) + "..." : c.content;
+        const preview = c.content.length > 60 ? `${c.content.slice(0, 60)}...` : c.content;
         parts.push(`    - line ${c.lineNumber}: ${preview}`);
       }
     }
@@ -243,7 +243,7 @@ const modulusCache = new Map<number, number>();
 function getModulus(hashLen: number): number {
   let cached = modulusCache.get(hashLen);
   if (cached === undefined) {
-    cached = Math.pow(16, hashLen);
+    cached = 16 ** hashLen;
     modulusCache.set(hashLen, cached);
   }
   return cached;
@@ -300,7 +300,7 @@ export function computeFileRev(content: string): string {
  * @returns the revision hash string, or null if not found
  */
 export function extractFileRev(annotatedContent: string, prefix?: string | false): string | null {
-  const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : (prefix === false ? "" : prefix);
+  const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : prefix === false ? "" : prefix;
   const escapedPrefix = effectivePrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^${escapedPrefix}REV:([0-9a-f]{8})$`);
   const firstLine = annotatedContent.split("\n")[0];
@@ -380,7 +380,7 @@ export function formatFileWithHashes(
   const normalized = content.includes("\r\n") ? content.replace(/\r\n/g, "\n") : content;
   const lines = normalized.split("\n");
   const effectiveLen = hashLen && hashLen >= 3 ? hashLen : getAdaptiveHashLength(lines.length);
-  const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : (prefix === false ? "" : prefix);
+  const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : prefix === false ? "" : prefix;
 
   // Collision detection: compute all hashes, detect and resolve collisions by
   // increasing hash length. Repeat until every hash is unique (up to 8 chars max).
@@ -402,14 +402,18 @@ export function formatFileWithHashes(
     for (let idx = 0; idx < lines.length; idx++) {
       const h = hashes[idx];
       const group = seen.get(h);
-      if (group) { group.push(idx); } else { seen.set(h, [idx]); }
+      if (group) {
+        group.push(idx);
+      } else {
+        seen.set(h, [idx]);
+      }
     }
 
     const nextDirty = new Set<number>();
     for (const [, group] of seen) {
       if (group.length < 2) continue;
       // Only upgrade if at least one member is dirty (or first pass)
-      if (dirtyIndices !== null && !group.some(idx => dirtyIndices!.has(idx))) continue;
+      if (dirtyIndices !== null && !group.some((idx) => dirtyIndices?.has(idx))) continue;
       for (const idx of group) {
         const newLen = Math.min(hashLens[idx] + 1, 8);
         if (newLen === hashLens[idx]) continue; // already at max length
@@ -464,7 +468,7 @@ const stripRegexCache = new Map<string, { hashLine: RegExp; rev: RegExp }>();
  * @returns original content without hash prefixes
  */
 export function stripHashes(content: string, prefix?: string | false): string {
-  const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : (prefix === false ? "" : prefix);
+  const effectivePrefix = prefix === undefined ? DEFAULT_PREFIX : prefix === false ? "" : prefix;
   const escapedPrefix = effectivePrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   // Use cached regex pair (hashLine + rev)
@@ -485,7 +489,7 @@ export function stripHashes(content: string, prefix?: string | false): string {
     .split("\n")
     .filter((line) => !revPattern.test(line))
     .map((line) => {
-      const match = line.match(hashLinePattern!);
+      const match = line.match(hashLinePattern);
       if (match) {
         // Preserve the patch marker (+/-/space) if present
         const patchMarker = match[1] || "";
@@ -746,9 +750,10 @@ export function resolveRange(
       actual: startVerify.actual,
       candidates: startVerify.candidates,
       lineNumber: start.line,
-      hint: startVerify.candidates && startVerify.candidates.length > 0
-        ? `Content may have moved. Candidates: ${startVerify.candidates.map(c => `line ${c.lineNumber}`).join(", ")}`
-        : "Re-read the file to get fresh hash references.",
+      hint:
+        startVerify.candidates && startVerify.candidates.length > 0
+          ? `Content may have moved. Candidates: ${startVerify.candidates.map((c) => `line ${c.lineNumber}`).join(", ")}`
+          : "Re-read the file to get fresh hash references.",
     });
   }
 
@@ -763,9 +768,10 @@ export function resolveRange(
       actual: endVerify.actual,
       candidates: endVerify.candidates,
       lineNumber: end.line,
-      hint: endVerify.candidates && endVerify.candidates.length > 0
-        ? `Content may have moved. Candidates: ${endVerify.candidates.map(c => `line ${c.lineNumber}`).join(", ")}`
-        : "Re-read the file to get fresh hash references.",
+      hint:
+        endVerify.candidates && endVerify.candidates.length > 0
+          ? `Content may have moved. Candidates: ${endVerify.candidates.map((c) => `line ${c.lineNumber}`).join(", ")}`
+          : "Re-read the file to get fresh hash references.",
     });
   }
 
@@ -854,9 +860,10 @@ export function applyHashEdit(
       actual: startVerify.actual,
       candidates: startVerify.candidates,
       lineNumber: start.line,
-      hint: startVerify.candidates && startVerify.candidates.length > 0
-        ? `Content may have moved. Candidates: ${startVerify.candidates.map(c => `line ${c.lineNumber}`).join(", ")}`
-        : "Re-read the file to get fresh hash references.",
+      hint:
+        startVerify.candidates && startVerify.candidates.length > 0
+          ? `Content may have moved. Candidates: ${startVerify.candidates.map((c) => `line ${c.lineNumber}`).join(", ")}`
+          : "Re-read the file to get fresh hash references.",
     });
   }
 
@@ -871,7 +878,8 @@ export function applyHashEdit(
     }
 
     const insertionLines = input.replacement.split("\n");
-    const insertIndex = input.operation === "insert_before" ? effectiveStartLine - 1 : effectiveStartLine;
+    const insertIndex =
+      input.operation === "insert_before" ? effectiveStartLine - 1 : effectiveStartLine;
     const next = [
       ...lines.slice(0, insertIndex),
       ...insertionLines,
@@ -904,9 +912,10 @@ export function applyHashEdit(
       actual: endVerify.actual,
       candidates: endVerify.candidates,
       lineNumber: end.line,
-      hint: endVerify.candidates && endVerify.candidates.length > 0
-        ? `Content may have moved. Candidates: ${endVerify.candidates.map(c => `line ${c.lineNumber}`).join(", ")}`
-        : "Re-read the file to get fresh hash references.",
+      hint:
+        endVerify.candidates && endVerify.candidates.length > 0
+          ? `Content may have moved. Candidates: ${endVerify.candidates.map((c) => `line ${c.lineNumber}`).join(", ")}`
+          : "Re-read the file to get fresh hash references.",
     });
   }
 
@@ -921,10 +930,7 @@ export function applyHashEdit(
     });
   }
 
-  const replacement =
-    input.operation === "delete"
-      ? ""
-      : input.replacement;
+  const replacement = input.operation === "delete" ? "" : input.replacement;
 
   if (replacement === undefined) {
     throw new HashlineError({
@@ -1108,7 +1114,12 @@ export interface HashlineInstance {
   computeFileRev: (content: string) => string;
   verifyFileRev: (expectedRev: string, currentContent: string) => void;
   extractFileRev: (annotatedContent: string) => string | null;
-  findCandidateLines: (originalLineNumber: number, expectedHash: string, lines: string[], hashLen?: number) => CandidateLine[];
+  findCandidateLines: (
+    originalLineNumber: number,
+    expectedHash: string,
+    lines: string[],
+    hashLen?: number,
+  ) => CandidateLine[];
 }
 
 /**
@@ -1188,14 +1199,19 @@ export function createHashline(config?: HashlineConfig): HashlineInstance {
     },
 
     verifyFileRev(expectedRev: string, currentContent: string): void {
-      return verifyFileRev(expectedRev, currentContent);
+      verifyFileRev(expectedRev, currentContent);
     },
 
     extractFileRev(annotatedContent: string): string | null {
       return extractFileRev(annotatedContent, pfx);
     },
 
-    findCandidateLines(originalLineNumber: number, expectedHash: string, lines: string[], hashLen?: number): CandidateLine[] {
+    findCandidateLines(
+      originalLineNumber: number,
+      expectedHash: string,
+      lines: string[],
+      hashLen?: number,
+    ): CandidateLine[] {
       return findCandidateLines(originalLineNumber, expectedHash, lines, hashLen);
     },
   };
