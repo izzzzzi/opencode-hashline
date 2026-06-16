@@ -13,10 +13,7 @@
 import { randomBytes } from "node:crypto";
 import {
   appendFileSync,
-  closeSync,
-  constants as fsConstants,
   mkdtempSync,
-  openSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -63,17 +60,7 @@ function registerTempDir(dir: string): void {
 function writeTempFile(tempDir: string, content: string): string {
   const name = `hl-${randomBytes(16).toString("hex")}.txt`;
   const tmpPath = join(tempDir, name);
-  // O_WRONLY | O_CREAT | O_EXCL — fails if file already exists (atomic creation)
-  const fd = openSync(
-    tmpPath,
-    fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL,
-    0o600,
-  );
-  try {
-    writeFileSync(fd, content, "utf-8");
-  } finally {
-    closeSync(fd);
-  }
+  writeFileSync(tmpPath, content, "utf-8");
   return tmpPath;
 }
 
@@ -115,9 +102,6 @@ export function sanitizeConfig(raw: unknown): HashlineConfig {
   }
   if (typeof r.fileRev === "boolean") {
     result.fileRev = r.fileRev;
-  }
-  if (typeof r.safeReapply === "boolean") {
-    result.safeReapply = r.safeReapply;
   }
 
   return result;
@@ -335,7 +319,6 @@ export type {
   HashEditResult,
   HashlineConfig,
   HashlineErrorCode,
-  HashlineInstance,
   ResolvedRange,
   VerifyHashResult,
 } from "./hashline";

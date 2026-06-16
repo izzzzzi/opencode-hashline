@@ -1,11 +1,14 @@
 {
   "name": "opencode-hashline",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Hashline plugin for OpenCode — content-addressable line hashing for precise AI code editing",
   "main": "dist/opencode-hashline.cjs",
   "module": "dist/opencode-hashline.js",
   "types": "dist/opencode-hashline.d.ts",
   "type": "module",
+  "engines": {
+    "node": "^22.3.0"
+  },
   "files": [
     "dist"
   ],
@@ -53,7 +56,7 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/node": "^25.2.3",
-    "@types/picomatch": "^4.0.2",
+
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "semantic-release": "^25.0.3",
@@ -62,9 +65,7 @@
     "vitest": "^4.0.18",
     "zod": "~4.1.8"
   },
-  "dependencies": {
-    "picomatch": "^4.0.3"
-  },
+  "dependencies": {},
   "lint-staged": {
     "*.{ts,js,json}": [
       "biome check --fix --no-errors-on-unmatched"

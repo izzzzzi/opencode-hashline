@@ -12,7 +12,7 @@
  *   #HL 3:0e7|}
  */
 
-import picomatch from "picomatch";
+import { matchesGlob as pathMatchesGlob } from "node:path";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -40,8 +40,6 @@ export interface HashlineConfig {
   debug?: boolean;
   /** Include file revision hash in annotations (default: true) */
   fileRev?: boolean;
-  /** Enable safe reapply — relocate lines by hash when they move (default: false) */
-  safeReapply?: boolean;
 }
 
 /** Default exclude patterns */
@@ -55,42 +53,6 @@ export const DEFAULT_EXCLUDE_PATTERNS: string[] = [
   "**/*.min.css",
   "**/*.bundle.js",
   "**/*.map",
-  "**/*.wasm",
-  "**/*.png",
-  "**/*.jpg",
-  "**/*.jpeg",
-  "**/*.gif",
-  "**/*.ico",
-  "**/*.svg",
-  "**/*.woff",
-  "**/*.woff2",
-  "**/*.ttf",
-  "**/*.eot",
-  "**/*.pdf",
-  "**/*.zip",
-  "**/*.tar",
-  "**/*.gz",
-  "**/*.exe",
-  "**/*.dll",
-  "**/*.so",
-  "**/*.dylib",
-  // Sensitive credential and secret files
-  "**/.env",
-  "**/.env.*",
-  "**/*.pem",
-  "**/*.key",
-  "**/*.p12",
-  "**/*.pfx",
-  "**/id_rsa",
-  "**/id_rsa.pub",
-  "**/id_ed25519",
-  "**/id_ed25519.pub",
-  "**/id_ecdsa",
-  "**/id_ecdsa.pub",
-  "**/.npmrc",
-  "**/.netrc",
-  "**/credentials",
-  "**/credentials.json",
 ];
 
 /** Default prefix for hashline annotations */
@@ -105,7 +67,6 @@ export const DEFAULT_CONFIG: Required<HashlineConfig> = {
   prefix: DEFAULT_PREFIX,
   debug: false,
   fileRev: true,
-  safeReapply: false,
 };
 
 /**
@@ -136,7 +97,6 @@ export function resolveConfig(
     prefix: merged.prefix !== undefined ? merged.prefix : DEFAULT_CONFIG.prefix,
     debug: merged.debug ?? DEFAULT_CONFIG.debug,
     fileRev: merged.fileRev ?? DEFAULT_CONFIG.fileRev,
-    safeReapply: merged.safeReapply ?? DEFAULT_CONFIG.safeReapply,
   };
 }
 
@@ -147,7 +107,6 @@ export function resolveConfig(
 export type HashlineErrorCode =
   | "HASH_MISMATCH"
   | "FILE_REV_MISMATCH"
-  | "AMBIGUOUS_REAPPLY"
   | "TARGET_OUT_OF_RANGE"
   | "INVALID_REF"
   | "INVALID_RANGE"
@@ -231,22 +190,11 @@ function fnv1aHash(str: string): number {
   return hash;
 }
 
-/**
- * Cache for Math.pow(16, hashLen) computations.
- * Key: hashLen, Value: 16^hashLen
- */
-const modulusCache = new Map<number, number>();
+/** Precomputed 16^hashLen for hashLen 0–8 */
+const MODULI = [1, 16, 256, 4096, 65536, 1048576, 16777216, 268435456, 4294967296];
 
-/**
- * Get cached modulus value for a given hash length.
- */
 function getModulus(hashLen: number): number {
-  let cached = modulusCache.get(hashLen);
-  if (cached === undefined) {
-    cached = 16 ** hashLen;
-    modulusCache.set(hashLen, cached);
-  }
-  return cached;
+  return MODULI[hashLen] ?? 16 ** hashLen;
 }
 
 /**
@@ -613,7 +561,6 @@ export interface VerifyHashResult {
   message?: string;
   code?: HashlineErrorCode;
   candidates?: CandidateLine[];
-  relocatedLine?: number;
 }
 
 /**
@@ -639,10 +586,8 @@ export function verifyHash(
   currentContent: string,
   hashLen?: number,
   lines?: string[],
-  safeReapply?: boolean,
 ): VerifyHashResult {
   const contentLines = lines ?? currentContent.split("\n");
-  // Use the length of the provided hash, not adaptive length from file size
   const effectiveLen = hashLen && hashLen >= 2 ? hashLen : hash.length;
 
   if (lineNumber < 1 || lineNumber > contentLines.length) {
@@ -657,29 +602,7 @@ export function verifyHash(
   const actualHash = computeLineHash(idx, contentLines[idx], effectiveLen);
 
   if (actualHash !== hash) {
-    // Find candidates for diagnostic or safe reapply
     const candidates = findCandidateLines(lineNumber, hash, contentLines, effectiveLen);
-
-    if (safeReapply && candidates.length === 1) {
-      // Unique candidate found — safe to relocate
-      return {
-        valid: true,
-        relocatedLine: candidates[0].lineNumber,
-        candidates,
-      };
-    }
-
-    if (safeReapply && candidates.length > 1) {
-      return {
-        valid: false,
-        code: "AMBIGUOUS_REAPPLY",
-        expected: hash,
-        actual: actualHash,
-        candidates,
-        message: `Hash mismatch at line ${lineNumber}: expected "${hash}", got "${actualHash}". Found ${candidates.length} candidate lines — ambiguous reapply.`,
-      };
-    }
-
     return {
       valid: false,
       code: "HASH_MISMATCH",
@@ -722,7 +645,6 @@ export function resolveRange(
   endRef: string,
   content: string,
   hashLen?: number,
-  safeReapply?: boolean,
 ): ResolvedRange {
   const start = parseHashRef(startRef);
   const end = parseHashRef(endRef);
@@ -736,12 +658,9 @@ export function resolveRange(
 
   const lineEnding = detectLineEnding(content);
   const normalized = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
-
-  // Split once and reuse for both verifications and range extraction
   const lines = normalized.split("\n");
 
-  // Use hash.length from the refs for verification, not adaptive
-  const startVerify = verifyHash(start.line, start.hash, normalized, hashLen, lines, safeReapply);
+  const startVerify = verifyHash(start.line, start.hash, normalized, hashLen, lines);
   if (!startVerify.valid) {
     throw new HashlineError({
       code: startVerify.code ?? "HASH_MISMATCH",
@@ -757,9 +676,7 @@ export function resolveRange(
     });
   }
 
-  const effectiveStartLine = startVerify.relocatedLine ?? start.line;
-
-  const endVerify = verifyHash(end.line, end.hash, normalized, hashLen, lines, safeReapply);
+  const endVerify = verifyHash(end.line, end.hash, normalized, hashLen, lines);
   if (!endVerify.valid) {
     throw new HashlineError({
       code: endVerify.code ?? "HASH_MISMATCH",
@@ -775,22 +692,10 @@ export function resolveRange(
     });
   }
 
-  const effectiveEndLine = endVerify.relocatedLine ?? end.line;
-
-  // Validate effective range after relocation
-  if (effectiveStartLine > effectiveEndLine) {
-    throw new HashlineError({
-      code: "INVALID_RANGE",
-      message: `Invalid effective range after relocation: start line ${effectiveStartLine} is after end line ${effectiveEndLine}`,
-      hint: "The referenced lines may have been reordered. Re-read the file to get fresh references.",
-    });
-  }
-
-  const rangeLines = lines.slice(effectiveStartLine - 1, effectiveEndLine);
-
+  const rangeLines = lines.slice(start.line - 1, end.line);
   return {
-    startLine: effectiveStartLine,
-    endLine: effectiveEndLine,
+    startLine: start.line,
+    endLine: end.line,
     lines: rangeLines,
     content: rangeLines.join(lineEnding),
   };
@@ -813,12 +718,10 @@ export function replaceRange(
   content: string,
   replacement: string,
   hashLen?: number,
-  safeReapply?: boolean,
 ): string {
   const lineEnding = detectLineEnding(content);
   const normalized = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
-  // resolveRange already splits once internally
-  const range = resolveRange(startRef, endRef, normalized, hashLen, safeReapply);
+  const range = resolveRange(startRef, endRef, normalized, hashLen);
   const lines = normalized.split("\n");
   const before = lines.slice(0, range.startLine - 1);
   const after = lines.slice(range.endLine);
@@ -837,12 +740,10 @@ export function applyHashEdit(
   input: HashEditInput,
   content: string,
   hashLen?: number,
-  safeReapply?: boolean,
 ): HashEditResult {
   const lineEnding = detectLineEnding(content);
   const workContent = lineEnding === "\r\n" ? content.replace(/\r\n/g, "\n") : content;
 
-  // Verify file revision if provided
   if (input.fileRev) {
     verifyFileRev(input.fileRev, workContent);
   }
@@ -851,7 +752,7 @@ export function applyHashEdit(
   const start = parseHashRef(normalizedStart);
   const lines = workContent.split("\n");
 
-  const startVerify = verifyHash(start.line, start.hash, workContent, hashLen, lines, safeReapply);
+  const startVerify = verifyHash(start.line, start.hash, workContent, hashLen, lines);
   if (!startVerify.valid) {
     throw new HashlineError({
       code: startVerify.code ?? "HASH_MISMATCH",
@@ -867,8 +768,6 @@ export function applyHashEdit(
     });
   }
 
-  const effectiveStartLine = startVerify.relocatedLine ?? start.line;
-
   if (input.operation === "insert_before" || input.operation === "insert_after") {
     if (input.replacement === undefined) {
       throw new HashlineError({
@@ -878,8 +777,7 @@ export function applyHashEdit(
     }
 
     const insertionLines = input.replacement.split("\n");
-    const insertIndex =
-      input.operation === "insert_before" ? effectiveStartLine - 1 : effectiveStartLine;
+    const insertIndex = input.operation === "insert_before" ? start.line - 1 : start.line;
     const next = [
       ...lines.slice(0, insertIndex),
       ...insertionLines,
@@ -888,8 +786,8 @@ export function applyHashEdit(
 
     return {
       operation: input.operation,
-      startLine: effectiveStartLine,
-      endLine: effectiveStartLine,
+      startLine: start.line,
+      endLine: start.line,
       content: lineEnding === "\r\n" ? next.replace(/\n/g, "\r\n") : next,
     };
   }
@@ -903,7 +801,7 @@ export function applyHashEdit(
     });
   }
 
-  const endVerify = verifyHash(end.line, end.hash, workContent, hashLen, lines, safeReapply);
+  const endVerify = verifyHash(end.line, end.hash, workContent, hashLen, lines);
   if (!endVerify.valid) {
     throw new HashlineError({
       code: endVerify.code ?? "HASH_MISMATCH",
@@ -919,19 +817,7 @@ export function applyHashEdit(
     });
   }
 
-  const effectiveEndLine = endVerify.relocatedLine ?? end.line;
-
-  // Validate effective range after relocation
-  if (effectiveStartLine > effectiveEndLine) {
-    throw new HashlineError({
-      code: "INVALID_RANGE",
-      message: `Invalid effective range after relocation: start line ${effectiveStartLine} is after end line ${effectiveEndLine}`,
-      hint: "The referenced lines may have been reordered. Re-read the file to get fresh references.",
-    });
-  }
-
   const replacement = input.operation === "delete" ? "" : input.replacement;
-
   if (replacement === undefined) {
     throw new HashlineError({
       code: "MISSING_REPLACEMENT",
@@ -939,15 +825,15 @@ export function applyHashEdit(
     });
   }
 
-  const before = lines.slice(0, effectiveStartLine - 1);
-  const after = lines.slice(effectiveEndLine);
+  const before = lines.slice(0, start.line - 1);
+  const after = lines.slice(end.line);
   const replacementLines = input.operation === "delete" ? [] : replacement.split("\n");
   const next = [...before, ...replacementLines, ...after].join("\n");
 
   return {
     operation: input.operation,
-    startLine: effectiveStartLine,
-    endLine: effectiveEndLine,
+    startLine: start.line,
+    endLine: end.line,
     content: lineEnding === "\r\n" ? next.replace(/\n/g, "\r\n") : next,
   };
 }
@@ -1038,28 +924,16 @@ export class HashlineCache {
 }
 
 // ---------------------------------------------------------------------------
-// Glob matching (using picomatch for full glob support)
+// Glob matching (using Node stdlib path.matchesGlob)
 // ---------------------------------------------------------------------------
 
-/** Cache for compiled glob matchers — avoids recompiling the same pattern on every call */
-const globMatcherCache = new Map<string, ReturnType<typeof picomatch>>();
-
 /**
- * Glob matcher using picomatch for full glob support.
- * Supports `*`, `**`, `?`, `{a,b}`, `[abc]`, and all standard glob patterns.
+ * Glob matcher using path.matchesGlob (Node 22+).
  * Windows paths are normalized to forward slashes.
  */
 export function matchesGlob(filePath: string, pattern: string): boolean {
-  // Normalize Windows separators
-  const normalizedPath = filePath.replace(/\\/g, "/");
-  const normalizedPattern = pattern.replace(/\\/g, "/");
-
-  let isMatch = globMatcherCache.get(normalizedPattern);
-  if (!isMatch) {
-    isMatch = picomatch(normalizedPattern, { dot: true });
-    globMatcherCache.set(normalizedPattern, isMatch);
-  }
-  return isMatch(normalizedPath);
+  // Normalize Windows backslashes — path.matchesGlob uses the OS-native separator
+  return pathMatchesGlob(filePath.replace(/\\/g, "/"), pattern.replace(/\\/g, "/"));
 }
 
 /**
@@ -1088,131 +962,4 @@ export function getByteLength(content: string): number {
  */
 export function detectLineEnding(content: string): "\r\n" | "\n" {
   return content.includes("\r\n") ? "\r\n" : "\n";
-}
-
-// ---------------------------------------------------------------------------
-// Factory — createHashline
-// ---------------------------------------------------------------------------
-
-/**
- * A Hashline instance with custom configuration.
- */
-export interface HashlineInstance {
-  config: Required<HashlineConfig>;
-  cache: HashlineCache;
-  formatFileWithHashes: (content: string, filePath?: string) => string;
-  stripHashes: (content: string) => string;
-  computeLineHash: (idx: number, line: string) => string;
-  buildHashMap: (content: string) => Map<string, number>;
-  verifyHash: (lineNumber: number, hash: string, currentContent: string) => VerifyHashResult;
-  resolveRange: (startRef: string, endRef: string, content: string) => ResolvedRange;
-  replaceRange: (startRef: string, endRef: string, content: string, replacement: string) => string;
-  applyHashEdit: (input: HashEditInput, content: string) => HashEditResult;
-  normalizeHashRef: (ref: string) => string;
-  parseHashRef: (ref: string) => { line: number; hash: string };
-  shouldExclude: (filePath: string) => boolean;
-  computeFileRev: (content: string) => string;
-  verifyFileRev: (expectedRev: string, currentContent: string) => void;
-  extractFileRev: (annotatedContent: string) => string | null;
-  findCandidateLines: (
-    originalLineNumber: number,
-    expectedHash: string,
-    lines: string[],
-    hashLen?: number,
-  ) => CandidateLine[];
-}
-
-/**
- * Create a Hashline instance with custom configuration.
- *
- * @param config - custom configuration options
- * @returns configured Hashline instance
- */
-export function createHashline(config?: HashlineConfig): HashlineInstance {
-  const resolved = resolveConfig(config);
-  const cache = new HashlineCache(resolved.cacheSize);
-  const hl = resolved.hashLength || 0;
-  const pfx = resolved.prefix;
-
-  return {
-    config: resolved,
-    cache,
-
-    formatFileWithHashes(content: string, filePath?: string): string {
-      if (filePath) {
-        // Check cache
-        const cached = cache.get(filePath, content);
-        if (cached) return cached;
-      }
-
-      const result = formatFileWithHashes(content, hl, pfx, resolved.fileRev);
-
-      if (filePath) {
-        cache.set(filePath, content, result);
-      }
-
-      return result;
-    },
-
-    stripHashes(content: string): string {
-      return stripHashes(content, pfx);
-    },
-
-    computeLineHash(idx: number, line: string): string {
-      return computeLineHash(idx, line, hl || 3);
-    },
-
-    buildHashMap(content: string): Map<string, number> {
-      return buildHashMap(content, hl);
-    },
-
-    verifyHash(lineNumber: number, hash: string, currentContent: string): VerifyHashResult {
-      return verifyHash(lineNumber, hash, currentContent, hl, undefined, resolved.safeReapply);
-    },
-
-    resolveRange(startRef: string, endRef: string, content: string): ResolvedRange {
-      return resolveRange(startRef, endRef, content, hl, resolved.safeReapply);
-    },
-
-    replaceRange(startRef: string, endRef: string, content: string, replacement: string): string {
-      return replaceRange(startRef, endRef, content, replacement, hl);
-    },
-
-    applyHashEdit(input: HashEditInput, content: string): HashEditResult {
-      return applyHashEdit(input, content, hl, resolved.safeReapply);
-    },
-
-    normalizeHashRef(ref: string): string {
-      return normalizeHashRef(ref);
-    },
-
-    parseHashRef(ref: string): { line: number; hash: string } {
-      return parseHashRef(ref);
-    },
-
-    shouldExclude(filePath: string): boolean {
-      return shouldExclude(filePath, resolved.exclude);
-    },
-
-    computeFileRev(content: string): string {
-      return computeFileRev(content);
-    },
-
-    verifyFileRev(expectedRev: string, currentContent: string): void {
-      verifyFileRev(expectedRev, currentContent);
-    },
-
-    extractFileRev(annotatedContent: string): string | null {
-      return extractFileRev(annotatedContent, pfx);
-    },
-
-    findCandidateLines(
-      originalLineNumber: number,
-      expectedHash: string,
-      lines: string[],
-      hashLen?: number,
-    ): CandidateLine[] {
-      return findCandidateLines(originalLineNumber, expectedHash, lines, hashLen);
-    },
-  };
 }

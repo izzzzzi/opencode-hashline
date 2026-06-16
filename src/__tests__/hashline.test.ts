@@ -4,7 +4,6 @@ import {
   buildHashMap,
   computeFileRev,
   computeLineHash,
-  createHashline,
   DEFAULT_PREFIX,
   detectLineEnding,
   extractFileRev,
@@ -639,25 +638,6 @@ describe("replaceRange", () => {
 
     expect(result).toBe("line one\n\nline four");
   });
-
-  it("supports safeReapply — relocates lines that moved", () => {
-    // "line two" was originally at line 2 (index 1), hash computed at index 1
-    const h2 = computeLineHash(1, "line two");
-    // Now "line two" moved to line 3 because a new line was inserted at top
-    const shiftedContent = "new first\nline one\nline two\nline three\nline four";
-
-    // Without safeReapply this would fail (hash mismatch at line 2)
-    // With safeReapply it should find "line two" at line 3
-    const result = replaceRange(
-      `2:${h2}`,
-      `2:${h2}`,
-      shiftedContent,
-      "replaced line",
-      undefined,
-      true,
-    );
-    expect(result).toBe("new first\nline one\nreplaced line\nline three\nline four");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1039,106 +1019,6 @@ describe("Unicode support", () => {
 });
 
 // ---------------------------------------------------------------------------
-// createHashline (factory)
-// ---------------------------------------------------------------------------
-
-describe("createHashline", () => {
-  it("creates an instance with default config", () => {
-    const hl = createHashline();
-    expect(hl.config.cacheSize).toBe(100);
-    expect(hl.config.hashLength).toBe(0);
-    expect(hl.config.prefix).toBe(DEFAULT_PREFIX);
-  });
-
-  it("formats and strips content correctly", () => {
-    const hl = createHashline();
-    const content = "hello\nworld";
-    const formatted = hl.formatFileWithHashes(content);
-    const stripped = hl.stripHashes(formatted);
-    expect(stripped).toBe(content);
-  });
-
-  it("uses cache when filePath is provided", () => {
-    const hl = createHashline();
-    const content = "hello\nworld";
-
-    const formatted1 = hl.formatFileWithHashes(content, "test.ts");
-    const formatted2 = hl.formatFileWithHashes(content, "test.ts");
-
-    expect(formatted1).toBe(formatted2);
-    expect(hl.cache.size).toBe(1);
-  });
-
-  it("respects hashLength override", () => {
-    const hl = createHashline({ hashLength: 3, fileRev: false });
-    const formatted = hl.formatFileWithHashes("hello");
-    expect(formatted).toMatch(/^#HL 1:[0-9a-f]{3}\|hello$/);
-  });
-
-  it("respects prefix: false for legacy format", () => {
-    const hl = createHashline({ prefix: false, fileRev: false });
-    const formatted = hl.formatFileWithHashes("hello");
-    expect(formatted).toMatch(/^1:[0-9a-f]{3}\|hello$/);
-    const stripped = hl.stripHashes(formatted);
-    expect(stripped).toBe("hello");
-  });
-
-  it("respects custom prefix", () => {
-    const hl = createHashline({ prefix: ">> ", fileRev: false });
-    const formatted = hl.formatFileWithHashes("hello");
-    expect(formatted).toMatch(/^>> 1:[0-9a-f]{3}\|hello$/);
-    const stripped = hl.stripHashes(formatted);
-    expect(stripped).toBe("hello");
-  });
-
-  it("verifyHash works through instance", () => {
-    const hl = createHashline();
-    const content = "line one\nline two";
-    const hash = hl.computeLineHash(0, "line one");
-    const result = hl.verifyHash(1, hash, content);
-    expect(result.valid).toBe(true);
-  });
-
-  it("shouldExclude works through instance", () => {
-    const hl = createHashline();
-    expect(hl.shouldExclude("node_modules/foo.js")).toBe(true);
-    expect(hl.shouldExclude("src/app.ts")).toBe(false);
-  });
-
-  it("resolveRange works through instance", () => {
-    const hl = createHashline();
-    const content = "a\nb\nc";
-    const h1 = hl.computeLineHash(0, "a");
-    const h2 = hl.computeLineHash(1, "b");
-    const range = hl.resolveRange(`1:${h1}`, `2:${h2}`, content);
-    expect(range.lines).toEqual(["a", "b"]);
-  });
-
-  it("replaceRange works through instance", () => {
-    const hl = createHashline();
-    const content = "a\nb\nc";
-    const h2 = hl.computeLineHash(1, "b");
-    const result = hl.replaceRange(`2:${h2}`, `2:${h2}`, content, "x");
-    expect(result).toBe("a\nx\nc");
-  });
-
-  it("applyHashEdit works through instance", () => {
-    const hl = createHashline();
-    const content = "a\nb\nc";
-    const h2 = hl.computeLineHash(1, "b");
-    const result = hl.applyHashEdit(
-      {
-        operation: "replace",
-        startRef: `2:${h2}`,
-        replacement: "x",
-      },
-      content,
-    );
-    expect(result.content).toBe("a\nx\nc");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // CRLF line ending preservation
 // ---------------------------------------------------------------------------
 
@@ -1426,44 +1306,26 @@ describe("findCandidateLines", () => {
 });
 
 // ---------------------------------------------------------------------------
-// verifyHash + safeReapply
+// verifyHash + candidates (diagnostic, no safeReapply)
 // ---------------------------------------------------------------------------
 
-describe("verifyHash + safeReapply", () => {
-  it("returns relocatedLine when unique candidate found with safeReapply", () => {
-    // "alpha" was at line 1 (index 0), now content at line 1 changed
+describe("verifyHash + candidates", () => {
+  it("finds candidates in error for diagnostics", () => {
     const originalHash = computeLineHash(0, "alpha");
     const newContent = "changed\nalpha\nother";
-    const result = verifyHash(1, originalHash, newContent, undefined, undefined, true);
-    expect(result.valid).toBe(true);
-    expect(result.relocatedLine).toBe(2);
-  });
-
-  it("returns AMBIGUOUS_REAPPLY when multiple candidates found", () => {
-    const originalHash = computeLineHash(0, "alpha");
-    const newContent = "changed\nalpha\nother\nalpha";
-    const result = verifyHash(1, originalHash, newContent, undefined, undefined, true);
-    expect(result.valid).toBe(false);
-    expect(result.code).toBe("AMBIGUOUS_REAPPLY");
-    expect(result.candidates).toHaveLength(2);
-  });
-
-  it("returns HASH_MISMATCH with empty candidates when no candidate found", () => {
-    const originalHash = computeLineHash(0, "alpha");
-    const newContent = "changed\nother\ndifferent";
-    const result = verifyHash(1, originalHash, newContent, undefined, undefined, true);
-    expect(result.valid).toBe(false);
-    expect(result.code).toBe("HASH_MISMATCH");
-    expect(result.candidates).toEqual([]);
-  });
-
-  it("without safeReapply, still finds candidates for diagnostics but returns invalid", () => {
-    const originalHash = computeLineHash(0, "alpha");
-    const newContent = "changed\nalpha\nother";
-    const result = verifyHash(1, originalHash, newContent, undefined, undefined, false);
+    const result = verifyHash(1, originalHash, newContent);
     expect(result.valid).toBe(false);
     expect(result.code).toBe("HASH_MISMATCH");
     expect(result.candidates).toHaveLength(1);
+  });
+
+  it("returns HASH_MISMATCH with no candidates when content is unique", () => {
+    const originalHash = computeLineHash(0, "alpha");
+    const newContent = "changed\nother\ndifferent";
+    const result = verifyHash(1, originalHash, newContent);
+    expect(result.valid).toBe(false);
+    expect(result.code).toBe("HASH_MISMATCH");
+    expect(result.candidates).toEqual([]);
   });
 });
 
@@ -1505,93 +1367,6 @@ describe("applyHashEdit + fileRev", () => {
       content,
     );
     expect(result.content).toBe("line one\nok\nline three");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// applyHashEdit + safeReapply
-// ---------------------------------------------------------------------------
-
-describe("applyHashEdit + safeReapply", () => {
-  it("relocates a line that moved with safeReapply", () => {
-    // Original content: "alpha" at line 1
-    const originalHash = computeLineHash(0, "alpha");
-    // Now "alpha" moved to line 2
-    const newContent = "inserted\nalpha\nline three";
-    const result = applyHashEdit(
-      { operation: "replace", startRef: `1:${originalHash}`, replacement: "replaced" },
-      newContent,
-      undefined,
-      true,
-    );
-    // Should replace "alpha" at its new position (line 2)
-    expect(result.content).toBe("inserted\nreplaced\nline three");
-    expect(result.startLine).toBe(2);
-  });
-
-  it("throws AMBIGUOUS_REAPPLY when multiple candidates exist", () => {
-    const originalHash = computeLineHash(0, "alpha");
-    const newContent = "changed\nalpha\nother\nalpha";
-    try {
-      applyHashEdit(
-        { operation: "replace", startRef: `1:${originalHash}`, replacement: "x" },
-        newContent,
-        undefined,
-        true,
-      );
-      expect.unreachable("should have thrown");
-    } catch (err) {
-      expect(err).toBeInstanceOf(HashlineError);
-      expect((err as HashlineError).code).toBe("AMBIGUOUS_REAPPLY");
-    }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createHashline factory — new methods
-// ---------------------------------------------------------------------------
-
-describe("createHashline — new methods", () => {
-  it("computeFileRev works through instance", () => {
-    const hl = createHashline();
-    const rev = hl.computeFileRev("hello\nworld");
-    expect(rev).toMatch(/^[0-9a-f]{8}$/);
-  });
-
-  it("verifyFileRev works through instance", () => {
-    const hl = createHashline();
-    const content = "hello\nworld";
-    const rev = hl.computeFileRev(content);
-    expect(() => hl.verifyFileRev(rev, content)).not.toThrow();
-  });
-
-  it("extractFileRev works through instance", () => {
-    const hl = createHashline({ fileRev: true });
-    const content = "hello\nworld";
-    const formatted = hl.formatFileWithHashes(content);
-    const rev = hl.extractFileRev(formatted);
-    expect(rev).toBe(hl.computeFileRev(content));
-  });
-
-  it("findCandidateLines works through instance", () => {
-    const hl = createHashline();
-    const hash = hl.computeLineHash(0, "alpha");
-    const lines = ["changed", "alpha", "other"];
-    const candidates = hl.findCandidateLines(1, hash, lines);
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0].lineNumber).toBe(2);
-  });
-
-  it("formatFileWithHashes includes REV when fileRev config is true", () => {
-    const hl = createHashline({ fileRev: true });
-    const formatted = hl.formatFileWithHashes("hello\nworld");
-    expect(formatted.split("\n")[0]).toMatch(/^#HL REV:[0-9a-f]{8}$/);
-  });
-
-  it("formatFileWithHashes omits REV when fileRev config is false", () => {
-    const hl = createHashline({ fileRev: false });
-    const formatted = hl.formatFileWithHashes("hello\nworld");
-    expect(formatted.split("\n")[0]).not.toContain("REV:");
   });
 });
 

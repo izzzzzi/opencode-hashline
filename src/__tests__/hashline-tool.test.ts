@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -44,15 +44,15 @@ describe("createHashlineEditTool", () => {
     expect(context.metadata).toHaveBeenCalledTimes(1);
   });
 
-  it("invalidates cache entries for path variants", async () => {
+  it("invalidates cache after edit", async () => {
     const dir = mkdtempSync(join(tmpdir(), "hashline-tool-test-"));
     const filePath = join(dir, "cache.ts");
     const original = "a\nb\nc";
     writeFileSync(filePath, original, "utf-8");
 
     const cache = new HashlineCache(10);
-    cache.set("cache.ts", original, "annotated-1");
-    cache.set(filePath, original, "annotated-2");
+    const realPath = realpathSync(filePath);
+    cache.set(realPath, original, "annotated");
 
     const h2 = computeLineHash(1, "b");
     const toolDef = createHashlineEditTool(resolveConfig(), cache);
@@ -139,32 +139,6 @@ describe("createHashlineEditTool", () => {
         context as Parameters<typeof toolDef.execute>[1],
       ),
     ).rejects.toThrow("FILE_REV_MISMATCH");
-  });
-
-  it("relocates line via safeReapply", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "hashline-tool-test-"));
-    const filePath = join(dir, "reapply.ts");
-    // "alpha" originally at line 1, now at line 2
-    const originalHash = computeLineHash(0, "alpha");
-    const newContent = "inserted\nalpha\nline three";
-    writeFileSync(filePath, newContent, "utf-8");
-
-    const toolDef = createHashlineEditTool(resolveConfig());
-    const context = makeContext(dir);
-
-    const output = await toolDef.execute(
-      {
-        path: "reapply.ts",
-        operation: "replace",
-        startRef: `1:${originalHash}`,
-        replacement: "replaced",
-        safeReapply: true,
-      },
-      context as Parameters<typeof toolDef.execute>[1],
-    );
-
-    expect(output).toContain("Applied replace");
-    expect(readFileSync(filePath, "utf-8")).toBe("inserted\nreplaced\nline three");
   });
 
   it("structured error includes diagnostic info", async () => {

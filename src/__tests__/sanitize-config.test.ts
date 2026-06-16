@@ -110,10 +110,6 @@ describe("sanitizeConfig", () => {
     expect(sanitizeConfig({ fileRev: true }).fileRev).toBe(true);
   });
 
-  it("accepts boolean safeReapply", () => {
-    expect(sanitizeConfig({ safeReapply: true }).safeReapply).toBe(true);
-  });
-
   it("ignores unknown keys", () => {
     const result = sanitizeConfig({ unknownKey: "value" });
     expect(result).toEqual({});

@@ -26,7 +26,7 @@ const DEBUG_LOG = join(homedir(), ".config", "opencode", "hashline-debug.log");
 /** Max number of callIDs to track for deduplication before evicting old entries */
 const MAX_PROCESSED_IDS = 10_000;
 
-/** Bounded Set that evicts oldest entries when capacity is reached */
+/** Simple capped set for deduplication */
 class BoundedSet<T> {
   private set = new Set<T>();
   constructor(private maxSize: number) {}
@@ -36,11 +36,12 @@ class BoundedSet<T> {
   }
 
   add(value: T): void {
-    if (this.set.size >= this.maxSize) {
-      const first = this.set.values().next().value;
-      if (first !== undefined) this.set.delete(first);
-    }
     this.set.add(value);
+    if (this.set.size > this.maxSize * 2) {
+      // Trim to maxSize when it doubles — avoids per-add eviction overhead
+      const entries = [...this.set];
+      this.set = new Set(entries.slice(entries.length - this.maxSize));
+    }
   }
 }
 
@@ -279,25 +280,26 @@ export function createFileEditBeforeHook(
       "body",
     ]);
 
-    // Recursively strip hashes from nested objects/arrays (batch/multiedit support)
-    function stripDeep(obj: Record<string, unknown>): void {
+    function stripFields(obj: Record<string, unknown>): void {
       for (const key of Object.keys(obj)) {
         const val = obj[key];
         if (typeof val === "string" && contentFields.has(key)) {
           obj[key] = stripHashes(val, prefix);
-        } else if (Array.isArray(val)) {
+        }
+      }
+      // Batch/multiedit: each element in arrays has content fields
+      for (const val of Object.values(obj)) {
+        if (Array.isArray(val)) {
           for (const item of val) {
             if (item && typeof item === "object" && !Array.isArray(item)) {
-              stripDeep(item as Record<string, unknown>);
+              stripFields(item as Record<string, unknown>);
             }
           }
-        } else if (val && typeof val === "object" && !Array.isArray(val)) {
-          stripDeep(val as Record<string, unknown>);
         }
       }
     }
 
-    stripDeep(output.args as Record<string, unknown>);
+    stripFields(output.args as Record<string, unknown>);
   };
 }
 
@@ -374,16 +376,9 @@ export function createSystemPromptHook(
         "- This is a hash of the entire file content. Pass it as the `fileRev` parameter to `hashline_edit` to verify the file hasn't changed.",
         "- If the file was modified between read and edit, the revision check fails with `FILE_REV_MISMATCH` — re-read the file.",
         "",
-        "### Safe reapply (`safeReapply`):",
-        "- Pass `safeReapply: true` to `hashline_edit` to enable automatic line relocation.",
-        "- If a line moved (e.g., due to insertions above), safe reapply finds it by content hash.",
-        "- If exactly one match is found, the edit proceeds at the new location.",
-        "- If multiple matches exist, the edit fails with `AMBIGUOUS_REAPPLY` — re-read the file.",
-        "",
         "### Structured error codes:",
         "- `HASH_MISMATCH` — line content changed since last read",
         "- `FILE_REV_MISMATCH` — file was modified since last read",
-        "- `AMBIGUOUS_REAPPLY` — multiple candidate lines found during safe reapply",
         "- `TARGET_OUT_OF_RANGE` — line number exceeds file length",
         "- `INVALID_REF` — malformed hash reference",
         "- `INVALID_RANGE` — start line is after end line",
@@ -394,7 +389,6 @@ export function createSystemPromptHook(
         "- When making multiple edits, work from bottom to top to avoid line number shifts.",
         "- For large replacements, use range references (e.g., `1:a3f to 10:b2c`) instead of individual lines.",
         "- Use `fileRev` to guard against stale edits on critical files.",
-        "- Use `safeReapply: true` when editing files that may have shifted due to earlier edits.",
       ].join("\n"),
     );
   };

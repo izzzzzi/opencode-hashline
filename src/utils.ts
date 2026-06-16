@@ -16,7 +16,6 @@ export type {
   HashEditResult,
   HashlineConfig,
   HashlineErrorCode,
-  HashlineInstance,
   ResolvedRange,
   VerifyHashResult,
 } from "./hashline";
@@ -26,7 +25,6 @@ export {
   buildHashMap,
   computeFileRev,
   computeLineHash,
-  createHashline,
   DEFAULT_CONFIG,
   DEFAULT_EXCLUDE_PATTERNS,
   DEFAULT_PREFIX,
