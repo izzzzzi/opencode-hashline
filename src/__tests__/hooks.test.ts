@@ -740,18 +740,6 @@ describe("System prompt — new sections", () => {
     expect(prompt).toContain("fileRev");
   });
 
-  it("includes safeReapply documentation", async () => {
-    const config = resolveConfig();
-    const hook = createSystemPromptHook(config);
-
-    const output = createSystemOutput();
-    await hook({} as Parameters<typeof hook>[0], output as Parameters<typeof hook>[1]);
-
-    const prompt = output.system[0];
-    expect(prompt).toContain("Safe reapply");
-    expect(prompt).toContain("safeReapply");
-  });
-
   it("includes structured error codes", async () => {
     const config = resolveConfig();
     const hook = createSystemPromptHook(config);
@@ -762,7 +750,7 @@ describe("System prompt — new sections", () => {
     const prompt = output.system[0];
     expect(prompt).toContain("HASH_MISMATCH");
     expect(prompt).toContain("FILE_REV_MISMATCH");
-    expect(prompt).toContain("AMBIGUOUS_REAPPLY");
+
     expect(prompt).toContain("TARGET_OUT_OF_RANGE");
     expect(prompt).toContain("INVALID_REF");
   });

@@ -1,16 +1,21 @@
-# [1.4.0](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.3...v1.4.0) (2026-05-05)
+# [1.4.1](https://github.com/izzzzzi/opencode-hashline/compare/v1.4.0...v1.4.1) (2026-06-16)
+
+
+### Performance Improvements
+
+* replace picomatch with Node 22 stdlib path.matchesGlob
 
 
 ### Bug Fixes
 
-* correct unit labels (MB → MiB) and misleading test name ([53e73e9](https://github.com/izzzzzi/opencode-hashline/commit/53e73e93991a6bb4b997fe801910c8eadafe0754))
+* remove speculative safeReapply feature (-150 lines)
+* shrink DEFAULT_EXCLUDE_PATTERNS from 40 to 8
+* remove HashlineInstance factory pattern (-80 lines)
+* add husky commit-msg (conventional commits) and pre-push hooks
+* run biome check in CI workflows
 
 
-### Features
 
-* add developer toolchain (Biome, Husky, VS Code integration) ([7b27f8a](https://github.com/izzzzzi/opencode-hashline/commit/7b27f8afbdebe5830eea3eb0d147415695141d2b))
-
-## [1.3.3](https://github.com/izzzzzi/opencode-hashline/compare/v1.3.2...v1.3.3) (2026-04-13)
 
 
 ### Bug Fixes

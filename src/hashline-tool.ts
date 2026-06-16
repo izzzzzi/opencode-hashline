@@ -44,22 +44,15 @@ export function createHashlineEditTool(config: Required<HashlineConfig>, cache?:
         .describe(
           "File revision hash (8-char hex from #HL REV:<hash>). When provided, verifies the file hasn't changed before editing.",
         ),
-      safeReapply: z
-        .boolean()
-        .optional()
-        .describe(
-          "Enable safe reapply: if a line moved, attempt to find it by content hash. Fails on ambiguous matches.",
-        ),
     },
     async execute(args: Record<string, unknown>, context: ToolContext) {
-      const { path, operation, startRef, endRef, replacement, fileRev, safeReapply } = args as {
+      const { path, operation, startRef, endRef, replacement, fileRev } = args as {
         path: string;
         operation: HashEditOperation;
         startRef: string;
         endRef?: string;
         replacement?: string;
         fileRev?: string;
-        safeReapply?: boolean;
       };
       const absPath = isAbsolute(path) ? path : resolve(context.directory, path);
       const realDirectory = realpathSync(resolve(context.directory));
@@ -102,7 +95,6 @@ export function createHashlineEditTool(config: Required<HashlineConfig>, cache?:
       if (!isWithin(realAbs, realDirectory) && !isWithin(realAbs, realWorktree)) {
         throw new Error(`Access denied: "${path}" resolves outside the project directory`);
       }
-      const normalizedAbs = resolve(absPath);
       const displayPath = relative(context.worktree, absPath) || path;
 
       let current: string;
@@ -133,7 +125,6 @@ export function createHashlineEditTool(config: Required<HashlineConfig>, cache?:
           },
           current,
           config.hashLength || undefined,
-          safeReapply ?? config.safeReapply,
         );
         nextContent = result.content;
         startLine = result.startLine;
@@ -154,12 +145,7 @@ export function createHashlineEditTool(config: Required<HashlineConfig>, cache?:
       }
 
       if (cache) {
-        // Invalidate all possible path variants the file could be cached under
         cache.invalidate(realAbs);
-        cache.invalidate(normalizedAbs);
-        cache.invalidate(absPath);
-        if (path !== absPath) cache.invalidate(path);
-        if (displayPath !== absPath) cache.invalidate(displayPath);
       }
 
       context.metadata({

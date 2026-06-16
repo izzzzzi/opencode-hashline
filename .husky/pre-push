@@ -1,0 +1,15 @@
+. "$(dirname "$0")/_/husky.sh"
+
+echo " → Running typecheck..."
+npm run typecheck --silent 2>/dev/null || {
+  echo " ✘ TypeScript errors found. Aborting push."
+  exit 1
+}
+
+echo " → Running tests..."
+npm test --silent 2>/dev/null || {
+  echo " ✘ Tests failed. Aborting push."
+  exit 1
+}
+
+echo " ✓ All checks passed."
